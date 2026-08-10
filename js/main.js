@@ -328,8 +328,7 @@ function renderPlayers() {
     const searchInput = document.getElementById('searchInput');
     const search = searchInput ? searchInput.value.toLowerCase() : '';
     
-    const regionFilter = document.getElementById('regionFilter');
-    const region = regionFilter ? regionFilter.value : 'all';
+    const region = window.currentRegionFilter || 'all';
     
     const targetKit = window.currentKitFilter || 'all';
     
@@ -444,7 +443,8 @@ function renderPlayers() {
 
         let quickTiersHTML = '';
         if (targetKit === 'all' || targetKit === 'sub-all') {
-            let playerKitsObjects = activeMaintiers.map(kit => {
+            const kitsForRow = (targetKit === 'sub-all') ? activeSubtiers : activeMaintiers;
+            let playerKitsObjects = kitsForRow.map(kit => {
                 const tier = getCleanTier(player, kit);
                 const ret = isKitRetired(player, kit);
                 
@@ -672,50 +672,56 @@ if (menuBtn && sidebar) {
 // Привязка обработчиков событий ввода
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
-    const regionFilter = document.getElementById('regionFilter');
     const retiredToggle = document.getElementById('retiredToggle');
 
     if (searchInput) searchInput.addEventListener('input', renderPlayers);
-    if (regionFilter) regionFilter.addEventListener('change', renderPlayers);
     if (retiredToggle) retiredToggle.addEventListener('change', renderPlayers);
 
-    // Инициализация кастомного выпадающего списка фильтра китов (Main/Sub Overall)
-    window.currentKitFilter = 'all';
+    // Универсальная инициализация кастомного выпадающего списка
+    function initCustomDropdown(prefix, stateKey, defaultValue) {
+        window[stateKey] = defaultValue;
 
-    const kitFilterCustom = document.getElementById('kitFilterCustom');
-    const kitFilterTrigger = document.getElementById('kitFilterTrigger');
-    const kitFilterPanel = document.getElementById('kitFilterPanel');
-    const kitFilterLabel = document.getElementById('kitFilterLabel');
+        const customEl = document.getElementById(prefix + 'Custom');
+        const triggerEl = document.getElementById(prefix + 'Trigger');
+        const panelEl = document.getElementById(prefix + 'Panel');
+        const labelEl = document.getElementById(prefix + 'Label');
 
-    if (kitFilterCustom && kitFilterTrigger && kitFilterPanel && kitFilterLabel) {
-        kitFilterTrigger.addEventListener('click', (e) => {
+        if (!customEl || !triggerEl || !panelEl || !labelEl) return;
+
+        triggerEl.addEventListener('click', (e) => {
             e.stopPropagation();
-            kitFilterCustom.classList.toggle('open');
+            customEl.classList.toggle('open');
         });
 
-        const options = kitFilterPanel.querySelectorAll('.custom-select-option');
+        const options = panelEl.querySelectorAll('.custom-select-option');
         options.forEach(opt => {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const value = opt.getAttribute('data-value');
-                window.currentKitFilter = value;
+                window[stateKey] = value;
 
                 options.forEach(o => o.classList.remove('selected'));
                 opt.classList.add('selected');
 
-                kitFilterLabel.textContent = opt.textContent;
-                kitFilterCustom.classList.remove('open');
+                labelEl.textContent = opt.textContent;
+                customEl.classList.remove('open');
 
                 renderPlayers();
             });
         });
 
         window.addEventListener('click', (e) => {
-            if (!kitFilterCustom.contains(e.target)) {
-                kitFilterCustom.classList.remove('open');
+            if (!customEl.contains(e.target)) {
+                customEl.classList.remove('open');
             }
         });
     }
+
+    // Фильтр китов (Main/Sub Overall)
+    initCustomDropdown('kitFilter', 'currentKitFilter', 'all');
+
+    // Фильтр региона
+    initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
 
     // Первичный запуск отрисовки
     initSite();
