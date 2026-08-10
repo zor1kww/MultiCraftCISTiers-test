@@ -222,16 +222,12 @@ function openProfile(idx, filteredPlayersJSON) {
         if (player.region) {
             metaHTML += `<span class="player-meta-tag">${player.region}</span>`;
         }
-        if (player.device) {
-            metaHTML += `<span class="player-meta-tag">${player.device}</span>`;
-        }
 
         // Сбор и отображение объединенного тира в модальном окне
-        const kitFilter = document.getElementById('kitFilter');
-        const targetKit = kitFilter ? kitFilter.value : 'all';
+        const targetKit = window.currentKitFilter || 'all';
         const displayProfileRetiredTag = hasAnyRetiredKit(player);
         
-        if (targetKit === 'all') {
+        if (targetKit === 'all' || targetKit === 'sub-all') {
             const avgTier = calcAverageTier(player);
             if (avgTier !== "Unranked") {
                 metaHTML += getMetaTierTag(avgTier, displayProfileRetiredTag);
@@ -335,11 +331,7 @@ function renderPlayers() {
     const regionFilter = document.getElementById('regionFilter');
     const region = regionFilter ? regionFilter.value : 'all';
     
-    const deviceFilter = document.getElementById('deviceFilter');
-    const device = deviceFilter ? deviceFilter.value : 'all';
-    
-    const kitFilter = document.getElementById('kitFilter');
-    const targetKit = kitFilter ? kitFilter.value : 'all';
+    const targetKit = window.currentKitFilter || 'all';
     
     const retiredToggle = document.getElementById('retiredToggle');
     const showRetiredInPlace = retiredToggle ? retiredToggle.checked : false;
@@ -353,12 +345,17 @@ function renderPlayers() {
     const subtitleEl = document.getElementById('tableSubtitle');
 
     if (targetKit === 'all') {
-        if (titleEl) titleEl.innerText = 'OVERALL PVP TOP';
-        if (subtitleEl) subtitleEl.innerText = 'OVERALL LEADERBOARD';
+        if (titleEl) titleEl.innerText = 'MAIN OVERALL PVP TOP';
+        if (subtitleEl) subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
+    } else if (targetKit === 'sub-all') {
+        if (titleEl) titleEl.innerText = 'SUB OVERALL PVP TOP';
+        if (subtitleEl) subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
     } else {
         if (titleEl) titleEl.innerText = `${targetKit.toUpperCase()} TOP`;
         if (subtitleEl) subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
     }
+
+    const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
 
     const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
     const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
@@ -368,27 +365,30 @@ function renderPlayers() {
     let filtered = players.filter(player => {
         const matchesSearch = player.name.toLowerCase().includes(search);
         const matchesRegion = (region === 'all' || player.region === region);
-        const matchesDevice = (device === 'all' || player.device === device);
         
-        if (targetKit !== 'all') {
+        if (targetKit !== 'all' && targetKit !== 'sub-all') {
             const tier = getCleanTier(player, targetKit);
             const ret = isKitRetired(player, targetKit);
             if (!showRetiredInPlace && ret) {
                 return false;
             }
-            return matchesSearch && matchesRegion && matchesDevice && tier !== "Unranked";
+            return matchesSearch && matchesRegion && tier !== "Unranked";
         }
         
         if (!showRetiredInPlace && hasAnyRetiredKit(player)) {
             return false;
         }
         
-        return matchesSearch && matchesRegion && matchesDevice;
+        return matchesSearch && matchesRegion;
     });
 
     if (targetKit === 'all') {
         filtered.sort((a, b) => {
             return calcPoints(b, activeMaintiers) - calcPoints(a, activeMaintiers);
+        });
+    } else if (targetKit === 'sub-all') {
+        filtered.sort((a, b) => {
+            return calcPoints(b, activeSubtiers) - calcPoints(a, activeSubtiers);
         });
     } else {
         filtered.sort((a, b) => {
@@ -420,9 +420,9 @@ function renderPlayers() {
         else if (index === 4) topClass = 'top-rank-5';
         
         let isRet = false;
-        if (targetKit !== 'all' && isKitRetired(player, targetKit)) {
+        if (targetKit !== 'all' && targetKit !== 'sub-all' && isKitRetired(player, targetKit)) {
             isRet = true;
-        } else if (targetKit === 'all' && hasAnyRetiredKit(player)) {
+        } else if ((targetKit === 'all' || targetKit === 'sub-all') && hasAnyRetiredKit(player)) {
             isRet = true;
         }
         
@@ -433,6 +433,9 @@ function renderPlayers() {
         if (targetKit === 'all') {
             const mainPts = calcPoints(player, activeMaintiers);
             rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${mainPts} PTS</span>`;
+        } else if (targetKit === 'sub-all') {
+            const subPts = calcPoints(player, activeSubtiers);
+            rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${subPts} PTS</span>`;
         } else {
             const currentTier = getCleanTier(player, targetKit);
             const ret = isKitRetired(player, targetKit);
@@ -440,7 +443,7 @@ function renderPlayers() {
         }
 
         let quickTiersHTML = '';
-        if (targetKit === 'all') {
+        if (targetKit === 'all' || targetKit === 'sub-all') {
             let playerKitsObjects = activeMaintiers.map(kit => {
                 const tier = getCleanTier(player, kit);
                 const ret = isKitRetired(player, kit);
@@ -509,12 +512,9 @@ function renderPlayers() {
         if (player.region) {
             metaTagsHTML += `<span class="player-meta-tag">${player.region}</span>`;
         }
-        if (player.device) {
-            metaTagsHTML += `<span class="player-meta-tag">${player.device}</span>`;
-        }
         
         // ВЫВОДИМ ТИР СРАЗУ ПОСЛЕ УСТРОЙСТВА:
-        if (targetKit !== 'all') {
+        if (targetKit !== 'all' && targetKit !== 'sub-all') {
             const currentTier = getCleanTier(player, targetKit);
             const ret = isKitRetired(player, targetKit);
             if (currentTier !== "Unranked") {
@@ -673,15 +673,49 @@ if (menuBtn && sidebar) {
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const regionFilter = document.getElementById('regionFilter');
-    const deviceFilter = document.getElementById('deviceFilter');
-    const kitFilter = document.getElementById('kitFilter');
     const retiredToggle = document.getElementById('retiredToggle');
 
     if (searchInput) searchInput.addEventListener('input', renderPlayers);
     if (regionFilter) regionFilter.addEventListener('change', renderPlayers);
-    if (deviceFilter) deviceFilter.addEventListener('change', renderPlayers);
-    if (kitFilter) kitFilter.addEventListener('change', renderPlayers);
     if (retiredToggle) retiredToggle.addEventListener('change', renderPlayers);
+
+    // Инициализация кастомного выпадающего списка фильтра китов (Main/Sub Overall)
+    window.currentKitFilter = 'all';
+
+    const kitFilterCustom = document.getElementById('kitFilterCustom');
+    const kitFilterTrigger = document.getElementById('kitFilterTrigger');
+    const kitFilterPanel = document.getElementById('kitFilterPanel');
+    const kitFilterLabel = document.getElementById('kitFilterLabel');
+
+    if (kitFilterCustom && kitFilterTrigger && kitFilterPanel && kitFilterLabel) {
+        kitFilterTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            kitFilterCustom.classList.toggle('open');
+        });
+
+        const options = kitFilterPanel.querySelectorAll('.custom-select-option');
+        options.forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = opt.getAttribute('data-value');
+                window.currentKitFilter = value;
+
+                options.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+
+                kitFilterLabel.textContent = opt.textContent;
+                kitFilterCustom.classList.remove('open');
+
+                renderPlayers();
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!kitFilterCustom.contains(e.target)) {
+                kitFilterCustom.classList.remove('open');
+            }
+        });
+    }
 
     // Первичный запуск отрисовки
     initSite();
