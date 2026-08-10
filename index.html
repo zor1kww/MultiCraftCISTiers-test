@@ -130,19 +130,25 @@
         </div>
         
         <div class="filters-row-2">
-            <select id="regionFilter">
-                <option value="all">Все регионы СНГ</option>
-                <option value="RU">RU</option>
-                <option value="UA">UA</option>
-                <option value="BY">BY</option>
-                <option value="KZ">KZ</option>
-                <option value="UZ">UZ</option>
-                <option value="KG">KG</option>
-                <option value="AM">AM</option>
-                <option value="AZ">AZ</option>
-                <option value="MD">MD</option>
-                <option value="TJ">TJ</option>
-            </select>
+            <div class="custom-select" id="regionFilterCustom">
+                <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
+                    <span id="regionFilterLabel">Все регионы СНГ</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="regionFilterPanel">
+                    <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
+                    <div class="custom-select-option" data-value="RU">RU</div>
+                    <div class="custom-select-option" data-value="UA">UA</div>
+                    <div class="custom-select-option" data-value="BY">BY</div>
+                    <div class="custom-select-option" data-value="KZ">KZ</div>
+                    <div class="custom-select-option" data-value="UZ">UZ</div>
+                    <div class="custom-select-option" data-value="KG">KG</div>
+                    <div class="custom-select-option" data-value="AM">AM</div>
+                    <div class="custom-select-option" data-value="AZ">AZ</div>
+                    <div class="custom-select-option" data-value="MD">MD</div>
+                    <div class="custom-select-option" data-value="TJ">TJ</div>
+                </div>
+            </div>
         </div>
 
         <div class="filters-row-3">
@@ -355,242 +361,4 @@
                 <strong>Железный Меч</strong> — без зачарований<br>
                 <strong>Золотые яблоки</strong> — Регенерация II на 5 секунд
             </div>
-            <p>Самый честный и требовательный кит на платформе. Никаких зачарований, никакой отдачи, никаких вспомогательных механик — только голый железный меч и реакция игрока. Каждая ошибка в тайминге сразу видна, спрятаться за экипировкой не получится.</p>
-            <div class="wiki-trains">
-                <span class="wiki-trains-label">Тренирует</span>
-                <div class="skill-tags"><span class="skill-tag">Базовое PvP</span><span class="skill-tag">Тайминги ударов</span><span class="skill-tag">Контроль здоровья</span><span class="skill-tag">Чистый механический скилл</span></div>
-            </div>
-            <div class="inv-preview-box">
-                <img src="assets/wiki/vanilla_inv.png" onerror="this.style.display='none';">
-            </div>
-        </div>
-
-        <div class="wiki-card">
-            <div class="wiki-title-wrapper">
-                <img class="wiki-title-icon" src="assets/logos/combo.png" alt="">
-                <h3>Combo</h3>
-            </div>
-            <div class="wiki-stats">
-                <strong>Драконий Меч</strong> — Отдача I (При ударе даёт замедление на 2 сек)<br>
-                <strong>Зачарованные Золотые Яблоки</strong> — Регенерация II на 60 сек
-            </div>
-            <p>Бой идёт либо до вскрытия панциря оппонента, либо до фатальной ошибки с падением. Каждый удар замедляет</p>
-            <div class="wiki-trains">
-                <span class="wiki-trains-label">Тренирует</span>
-                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Концентрацию</span></div>
-            </div>
-            <div class="inv-preview-box">
-                <img src="assets/wiki/combo_inv.png" onerror="this.style.display='none';">
-            </div>
-        </div>
-
-        <div class="wiki-card">
-            <div class="wiki-title-wrapper">
-                <img class="wiki-title-icon" src="assets/logos/gapple.png" alt="">
-                <h3>Gapple</h3>
-            </div>
-            <div class="wiki-stats">
-                <strong>Драконий Меч</strong> — Отдача I<br>
-                <strong>Золотые Яблоки</strong> — Регенерация II на 5 секунд
-            </div>
-            <p>Кит, который заставляет следить за каждой единицей здоровья. Яблоки дают кратковременное преимущество, но не спасают от грубых ошибок</p>
-            <div class="wiki-trains">
-                <span class="wiki-trains-label">Тренирует</span>
-                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Контроль здоровья</span><span class="skill-tag">Свап предметов</span></div>
-            </div>
-            <div class="inv-preview-box">
-                <img src="assets/wiki/gapple_inv.png" onerror="this.style.display='none';">
-            </div>
-        </div>
-
-        <div class="wiki-card">
-            <div class="wiki-title-wrapper">
-                <img class="wiki-title-icon" src="assets/logos/mace.png" alt="">
-                <h3>Mace</h3>
-            </div>
-            <div class="wiki-stats">
-                <strong>Изумрудный Меч</strong> — Резкость II, Отдача I (Быстрое кд, мал. урон/отдача)<br>
-                <strong>Булава</strong> — Плотность V, Порыв ветра III (Среднее кд/урон, выс. отдача)<br>
-                <strong>Ножницы</strong> — Эффективность V
-            </div>
-            <p>Кит построен вокруг контроля падений. Булава отбрасывает противника высоко в воздух. Ножницы мгновенно ломают стога сена, лишая оппонента безопасного приземления.</p>
-            <div class="wiki-trains">
-                <span class="wiki-trains-label">Тренирует</span>
-                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Свап предметов</span></div>
-            </div>
-            <div class="inv-preview-box">
-                <img src="assets/wiki/mace_inv.png" onerror="this.style.display='none';">
-            </div>
-        </div>
-
-        <div class="wiki-card">
-            <div class="wiki-title-wrapper">
-                <img class="wiki-title-icon" src="assets/logos/crystal.png" alt="">
-                <h3>Crystal</h3>
-            </div>
-            <div class="wiki-stats">
-                <strong>Булава</strong> — Пробитие V (Высокий урон, средняя отдача, большое кд)<br>
-                <strong>Рубиновый Меч</strong> — Резкость V, Отдача II, Мародерство III (Маленький урон/отдача/кд)
-            </div>
-            <p>Молния бьёт в ближайшего игрока, стоящего к кристаллу. Неважно, кто его поставил — установщик тоже может получить удар, если окажется ближе всех.</p>
-            <div class="wiki-trains">
-                <span class="wiki-trains-label">Тренирует</span>
-                <div class="skill-tags"><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Свап предметов</span></div>
-            </div>
-            <div class="inv-preview-box">
-                <img src="assets/wiki/crystal_inv.png" onerror="this.style.display='none';">
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="tab-content" id="hallTab" style="display: none;">
-    <button class="back-btn" onclick="backHome()">Назад на Главную</button>
-    <h2 class="section-title">Доска почета</h2>
-    <div class="info-box">
-        <p style="margin-bottom: 12px; font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; color: var(--accent); ">Руководство платформы:</p>
-        <span class="hall-name-link" onclick="openProfileByName('-999-')">-999-</span> — Создатель, Владелец сервера, Со-автор системы MultiCraftCISTiers.<br><br>
-        <span class="hall-name-link" onclick="openProfileByName('zor1kkqwix')">zor1kkqwix</span> — Главный Администратор сервера, Создатель и технический разработчик системы MultiCraftCISTiers.<br><br>
-        <span class="hall-name-link" onclick="openProfileByName('AMORE')">AMORE</span> — Администратор и главный строитель сервера.
-    </div>
-</div>
-
-<div class="tab-content" id="infoCenterTab" style="display: none;">
-    <button class="back-btn" onclick="backHome()">Назад на Главную</button>
-    <h2 class="section-title">Информация</h2>
-    
-    <div class="info-nav-buttons">
-        <button class="info-nav-btn active" onclick="switchInfoSubTab('tierTestSubTab', this)">Как пройти тиртест?</button>
-        <button class="info-nav-btn" onclick="switchInfoSubTab('ptsSubTab', this)">Распределение очков</button>
-        <button class="info-nav-btn" onclick="switchInfoSubTab('testersSubTab', this)">Тестеры</button>
-        <button class="info-nav-btn" onclick="switchInfoSubTab('rulesSubTab', this)">Правила</button>
-        <button class="info-nav-btn" onclick="switchInfoSubTab('faqSubTab', this)">FAQ</button>
-    </div>
-
-    <div class="info-box">
-        <div id="tierTestSubTab" class="info-sub-tab-content" style="display: block;">
-            <div class="info-section">
-                <div class="info-section-title">Как пройти тиртест?</div>
-                <div class="step-list">
-                    <div class="step-card">
-                        <div class="step-num">1. Подача заявки</div>
-                        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Игрок переходит в нашу Telegram-группу, находит раздел с интересующим его китом и отправляет заявку боту.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="step-num">2. Шаблон заявки</div>
-                        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Для подачи заявки используйте предложенный ботом шаблон, кратко заполнив необходимую информацию.</p>
-                    </div>
-                    <div class="step-card">
-                        <div class="step-num">3. Проведение матча</div>
-                        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">После подачи заявки тестер свяжется с вами, чтобы договориться о времени проведения теста. Пройти тиртест можно также напрямую на сервере, договорившись с тиртестером лично, когда он находится в сети (без обязательного использования Telegram). Результат будет опубликован на сайте.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="ptsSubTab" class="info-sub-tab-content" style="display: none;">
-            <div class="info-section">
-                <div class="info-section-title">Распределение очков PTS</div>
-                <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 15px;">
-                    Рейтинг игрока формируется путём суммирования очков PTS, полученных только за основные (main) киты. Очки, набранные за дополнительные (sub) киты, в общий рейтинг не учитываются.
-                </p>
-                <table class="faq-table">
-                    <thead>
-                        <tr>
-                            <th>Тир</th>
-                            <th>PTS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="faqTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="testersSubTab" class="info-sub-tab-content" style="display: none;">
-            <div class="info-section">
-                <div class="info-section-title">Тестеры</div>
-                <p style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 20px;">
-                    Тестеры — это опытные игроки, которые проводят проверку навыков и помогают определить ваш уровень мастерства на платформе.
-                </p>
-                <div class="testers-grid">
-                    <div class="tester-card" onclick="openProfileByName('-999-')">
-                        <div class="tester-name">-999-</div>
-                        <div class="tester-status">Старший Тестер</div>
-                    </div>
-                    <div class="tester-card" onclick="openProfileByName('zor1kkqwix')">
-                        <div class="tester-name">zor1kkqwix</div>
-                        <div class="tester-status">Квалификационный Тестер</div>
-                    </div>
-                    <div class="tester-card" onclick="openProfileByName('_Xx_deras_xX')">
-                        <div class="tester-name">_Xx_deras_xX</div>
-                        <div class="tester-status">Квалификационный Тестер</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="rulesSubTab" class="info-sub-tab-content" style="display: none;">
-            <div class="info-section">
-                <div class="info-section-title">Правила платформы</div>
-                <ul class="rules-list-container" style="margin-left: 20px; margin-top: 15px; font-size: 14px; color: var(--text-main); line-height: 1.8; list-style-type: decimal; padding-left: 0;">
-                    <li style="margin-bottom: 10px;">Если вы хотите пройти тиртест с другого устройства, вам необходимо создать второй (отдельный) аккаунт.</li>
-                    <li style="margin-bottom: 10px;">Запрещено использование любых сторонних модификаций, читов или макросов, дающих преимущество в бою.</li>
-                    <li style="margin-bottom: 10px;">Запрещено умышленно затягивать процесс тиртеста или проявлять токсичность/неуважение к тиртестерам.</li>
-                    <li style="margin-bottom: 10px;">Запрещена передача своего верифицированного аккаунта третьим лицам.</li>
-                </ul>
-            </div>
-        </div>
-
-        <div id="faqSubTab" class="info-sub-tab-content" style="display: none;">
-            <div class="info-section">
-                <div class="info-section-title">Часто задаваемые вопросы</div>
-                <div class="faq-block-item" style="margin-top: 0;">
-                    <h3>Типы тестеров:</h3>
-                    <p>На нашей платформе есть два типа тестеров: квалификационный и старший.</p>
-                    <ul style="margin-left: 20px; margin-top: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.6; list-style-type: none; padding-left: 0;">
-                        <li style="margin-bottom: 6px;"><strong>Квалификационный тестер:</strong> Это игроки уровня от <span id="faqColorLT3_1">LT3</span> до <span id="faqColorLT2_1">LT2</span>. Максимальный уровень, который вы можете получить за этот тест, — <span id="faqColorLT3_2">LT3</span>.</li>
-                        <li><strong>Старший тестер:</strong> Это опытные игроки уровня от <span id="faqColorHT2_1">HT2</span> до <span id="faqColorHT1_1">HT1</span>.</li>
-                    </ul>
-                </div>
-                <div class="faq-block-item">
-                    <h3>Процесс повышения уровня:</h3>
-                    <p style="margin-bottom: 8px;">Если вы достигли уровня <span id="faqColorLT3_3">LT3</span>, вы можете пройти второй тест со старшим тестером. Каждый тест состоит из дуэлей до первых четырех побед. Минимальный уровень, который вы можете получить за этот тест, — <span id="faqColorLT3_4">LT3</span>, а максимальный — <span id="faqColorLT1_1">LT1</span>.</p>
-                    <p style="margin-bottom: 8px;">Для получения наивысшего ранга <span id="faqColorHT1_2">HT1</span> претенденту необходимо одолеть всех действующих игроков с рангом <span id="faqColorLT1_2">LT1</span>. Если на платформе уже имеются действующие игроки уровня <span id="faqColorHT1_3">HT1</span>, претендент обязан сразиться с ними. Действующий чемпион сохраняет свой статус, если матч завершается с минимальным счетом 3/4 в его пользу; в противном случае ранг переходит к победителю, а проигравшему присваивается <span id="faqColorLT1_3">LT1</span>.</p>
-                    
-                    <p><strong>Кулдаун на пересдачу:</strong> После прохождения тиртеста по конкретному киту, повторная попытка для этого же режима становится доступной ровно через 7 дней. Исключение: если в ходе теста вы успешно повысили свой ранг до <span id="faqColorLT3_5">LT3</span>, вы имеете право мгновенно и без ожидания подать заявку на прохождение тиртеста со Старшим Тестером.</p>
-                </div>
-                <div class="faq-block-item">
-                    <h3>Статус Retired:</h3>
-                    <p style="margin-bottom: 8px;">Если игрок не проходил тиртест по конкретному киту более двух месяцев, рядом с названием этого кита появляется приписка R, например, <span style="font-weight: bold; color: #ff4747;">R</span><span id="faqColorHT1_4">HT1</span>.</p>
-                    <p>Игроки со статусом Retired не отображаются в общем топе. Чтобы снова стать активным, достаточно пройти тиртест по соответствующему киту.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="js/config.js"></script>
-<script>
-function loadPlayersScript(url, callback) {
-    const script = document.createElement('script');
-    const cacheBuster = '?v=' + new Date().getTime();
-    script.src = url + cacheBuster;
-    script.onload = () => callback(true);
-    script.onerror = () => callback(false);
-    document.head.appendChild(script);
-}
-window.addEventListener('DOMContentLoaded', () => {
-    loadPlayersScript('players/players.js', (success) => {
-        if (success && typeof players !== 'undefined') { 
-            initSite(); 
-        } else {
-            loadPlayersScript('players.js', (successRoot) => {
-                if (successRoot && typeof players !== 'undefined') { initSite(); }
-            });
-        }
-    });
-});
-</script>
-<script src="js/main.js"></script>
-</body>
-</html>
+            <p>Самый честный и требовательный кит на платформе. Никаких зачарований, никакой отдачи, никаких вспомогательных механик — только голы
