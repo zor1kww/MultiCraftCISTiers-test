@@ -770,3 +770,8 @@ function copyInviteCode() {
 function initSite() {
     renderPlayers();
 }
+
+// Хук: вызывается из index.html, когда players.js загрузился (асинхронно, после этого файла)
+window.onPlayersLoaded = function() {
+    renderPlayers();
+};
