@@ -104,7 +104,7 @@ body, html {
 }
 
 .menu-btn {
-    background: #121d35;
+    background: var(--sidebar-item);
     border: 1px solid rgba(255,204,71,.3);
     color: var(--accent);
     padding: 10px 14px;
@@ -421,7 +421,10 @@ body, html {
 /* ==========================================================================
    ТОП 1-5 ЦВЕТА И СВЕЧЕНИЯ РАМОК
    ========================================================================== */
-.top-rank-1 { border-color: rgba(218, 165, 32, 0.7) !important; box-shadow: 0 0 15px rgba(218, 165, 32, 0.15); }
+.top-rank-1 {
+    border-color: rgba(218, 165, 32, 0.7) !important;
+    box-shadow: 0 0 15px rgba(218, 165, 32, 0.15);
+}
 .top-rank-2 { border-color: rgba(169, 169, 169, 0.7) !important; box-shadow: 0 0 15px rgba(169, 169, 169, 0.15); }
 .top-rank-3 { border-color: rgba(160, 82, 45, 0.7) !important; box-shadow: 0 0 15px rgba(160, 82, 45, 0.15); }
 .top-rank-4 { border-color: rgba(128, 128, 128, 0.7) !important; box-shadow: 0 0 15px rgba(128, 128, 128, 0.15); }
@@ -443,40 +446,111 @@ body, html {
 
 /* ==========================================================================
    СТРУКТУРА КАРТОЧКИ ИГРОКА (.player-card-row)
+   Обновлённый вид: портрет игрока слева (голова+плечи), градиентный фон
+   по месту в рейтинге, имя/очки/тир справа сверху, ряд китов снизу.
    ========================================================================== */
 .player-card-row {
-    padding: 14px 16px;
+    padding: 16px;
     display: flex;
-    align-items: center;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 16px;
     cursor: pointer;
     width: 100%;
+    position: relative;
+    overflow: hidden;
 }
 
-.player-name-block {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+/* Градиентная подложка карточки - цвет зависит от места в рейтинге.
+   Наносится отдельным слоем позади контента, чтобы не мешать тексту. */
+.player-card-row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(120deg, rgba(255,255,255,0.03), transparent 60%);
+    pointer-events: none;
+}
+
+.top-rank-1 .player-card-row::before {
+    background: linear-gradient(120deg, rgba(218, 165, 32, 0.22), transparent 65%);
+}
+.top-rank-2 .player-card-row::before {
+    background: linear-gradient(120deg, rgba(192, 192, 192, 0.20), transparent 65%);
+}
+.top-rank-3 .player-card-row::before {
+    background: linear-gradient(120deg, rgba(160, 82, 45, 0.20), transparent 65%);
+}
+.top-rank-4 .player-card-row::before {
+    background: linear-gradient(120deg, rgba(128, 128, 128, 0.14), transparent 65%);
+}
+.top-rank-5 .player-card-row::before {
+    background: linear-gradient(120deg, rgba(0, 128, 128, 0.14), transparent 65%);
+}
+
+/* Портрет игрока - квадратная рамка, показывает только голову и плечи
+   скина (обрезка через object-position), не скин целиком в полный рост */
+.player-portrait {
+    position: relative;
+    z-index: 1;
     flex-shrink: 0;
-    min-width: 180px;
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border-color);
 }
 
-.player-rank {
-    color: var(--accent);
-    font-size: 16px;
-    font-weight: bold;
+.player-portrait img {
+    width: 100%;
+    height: 260%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
 }
 
-.player-name {
-    color: var(--text-main);
-    font-size: 16px;
-}
+.top-rank-1 .player-portrait { border-color: rgba(218, 165, 32, 0.6); }
+.top-rank-2 .player-portrait { border-color: rgba(192, 192, 192, 0.6); }
+.top-rank-3 .player-portrait { border-color: rgba(160, 82, 45, 0.6); }
 
-.player-center-block {
+.player-info-column {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex-grow: 1;
+    min-width: 0;
+}
+
+.player-info-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.player-name-block {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.player-rank {
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.player-name {
+    color: var(--text-main);
+    font-size: 17px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .player-meta-box {
@@ -585,16 +659,15 @@ body, html {
     text-align: center;
 }
 
-/* Блок PTS / Тир (Всегда прижат в самый правый край) */
+/* Блок PTS / Тир — теперь встроен в верхнюю строку карточки, справа от имени */
 .player-right {
-    margin-left: auto;
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    font-size: 16px;
+    gap: 6px;
+    font-size: 15px;
     font-weight: bold;
-    min-width: 90px;
+    white-space: nowrap;
 }
 
 .tier-badge {
@@ -672,9 +745,9 @@ body, html {
 }
 
 .close-modal-btn {
-    background: #16223f;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
+    background: var(--sidebar-item);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
     font-size: 16px;
     padding: 8px 14px;
     border-radius: 8px;
@@ -752,12 +825,175 @@ body, html {
     color: var(--text-muted);
     font-size: 11px;
 }
+
+/* Индикатор штрафных очков по конкретному киту в профиле игрока
+   (см. penalty_logic.py на боте - только для HT3+ тестов) */
+.m-penalty-box {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255, 107, 53, 0.15);
+    color: #ff6b35;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Суммарные штрафные очки игрока в шапке профиля */
+.modal-penalty-total {
+    color: #ff6b35;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 2px 0 0 0;
+}
+
 .modal-block-footer {
     margin-top: 10px;
     text-align: right;
     font-size: 12px;
     color: var(--accent);
     font-weight: bold;
+}
+
+/* Блок "Дуэли" в профиле игрока — на всю ширину, под Main/Sub Tiers */
+.modal-duels-block {
+    margin-top: 15px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.duels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.duels-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 12px 0;
+}
+
+.duel-row {
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: var(--card-bg);
+}
+
+.duel-row.duel-win {
+    border-left-color: #4ade80;
+}
+
+.duel-row.duel-loss {
+    border-left-color: #ff4747;
+}
+
+.duel-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.duel-kit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.duel-kit-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
+.duel-date {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.duel-row-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.duel-opponent-label {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.duel-opponent-name {
+    color: var(--text-main);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.duel-opponent-name:hover {
+    color: var(--accent);
+}
+
+.duel-score {
+    color: var(--text-main);
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.duel-result-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+.duel-win .duel-result-badge {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.12);
+}
+
+.duel-loss .duel-result-badge {
+    color: #ff4747;
+    background: rgba(255, 71, 71, 0.12);
+}
+
+.duel-comment {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Блок изменения ранга внутри строки дуэли (предыдущий → полученный) */
+.duel-tier-change {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: monospace;
+}
+
+.duel-tier-arrow {
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+/* Вкладка "Дуэли" — тот же список, но без ограничения по высоте */
+.duels-list-global {
+    margin-top: 15px;
+    max-width: 720px;
 }
 
 /* ==========================================================================
@@ -896,8 +1132,8 @@ body, html {
    ========================================================================== */
 .wiki-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
     margin-top: 15px;
 }
 
@@ -905,36 +1141,51 @@ body, html {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 14px;
-    padding: 18px;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    min-width: 0;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.wiki-card:hover {
+    border-color: rgba(255, 204, 71, 0.35);
 }
 
 .wiki-title-wrapper {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 0;
-    padding-bottom: 12px;
+    gap: 12px;
+    padding: 16px 18px;
+    background: rgba(255, 204, 71, 0.05);
     border-bottom: 1px solid var(--border-color);
 }
 
 .wiki-title-icon {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
     filter: drop-shadow(0 0 6px rgba(255, 204, 71, 0.35));
+    flex-shrink: 0;
 }
 
 /* Заголовок кита — крупнее, с разрядкой под капс-стиль оружейной таблички */
 .wiki-card h3 {
     color: var(--text-main);
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     margin-bottom: 0;
     letter-spacing: 1.2px;
     text-transform: uppercase;
+}
+
+.wiki-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 18px;
+    min-width: 0;
 }
 
 /* Блок статов оружия — оформлен как карточка спецификации, а не обычный текст */
@@ -947,6 +1198,8 @@ body, html {
     line-height: 1.9;
     color: var(--text-muted);
     letter-spacing: 0.2px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .wiki-stats strong {
@@ -954,26 +1207,31 @@ body, html {
     font-weight: 700;
 }
 
-/* Описание/лор кита — курсив отделяет "атмосферу" от сухих статов выше */
+/* Описание/лор кита */
 .wiki-card p {
     font-size: 13px;
     font-weight: normal;
-    font-style: italic;
-    color: #b0bacd;
+    color: var(--text-muted);
     line-height: 1.65;
     margin-bottom: 0;
     letter-spacing: 0.2px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .wiki-card p:last-of-type {
     margin-bottom: 0;
 }
 
-/* Блок "Тренирует" — ярлык + отдельные теги-пилюли под каждый навык */
+/* Блок "Тренирует" — ярлык + компактный список навыков построчно */
 .wiki-trains {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 0;
 }
 
 .wiki-trains-label {
@@ -988,6 +1246,7 @@ body, html {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    min-width: 0;
 }
 
 .skill-tag {
@@ -997,7 +1256,10 @@ body, html {
     border: 1px solid rgba(255, 204, 71, 0.25);
     border-radius: 20px;
     padding: 3px 10px;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    max-width: 100%;
+    line-height: 1.4;
     transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -1128,6 +1390,266 @@ body, html {
 }
 
 /* ==========================================================================
+   ДОСКА ПОЧЕТА
+   ========================================================================== */
+.honor-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.honor-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.honor-card:hover,
+.honor-card:active {
+    border-color: rgba(255, 204, 71, 0.5);
+    transform: translateX(2px);
+}
+
+.honor-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.honor-role {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   БЛОКИ ПРАВИЛ (карточка "Правила проведения тестов")
+   ========================================================================== */
+.rules-block {
+    margin-bottom: 22px;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--card-bg);
+}
+
+.rules-block-title {
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255,204,71,.05);
+}
+
+.rule-num-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.rule-num-row:last-child {
+    border-bottom: none;
+}
+
+.rule-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(255,204,71,.1);
+    border: 1px solid rgba(255,204,71,.3);
+    margin-top: 1px;
+}
+
+.rule-num-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 3px;
+}
+
+.rule-num-text {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+
+/* ==========================================================================
+   РАЗДЕЛЫ-ХАБЫ "ТЕСТИРОВАНИЕ" И "ДРУГАЯ ИНФОРМАЦИЯ"
+   Пронумерованные карточки-обложки с раскрытием контента по клику
+   ========================================================================== */
+.hub-intro {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 4px 0 20px;
+}
+
+.hub-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.hub-card {
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--card-bg);
+    cursor: pointer;
+    min-height: 150px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.hub-card-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-color: #0a1020;
+}
+
+.hub-card-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(5,8,22,.35) 0%, rgba(5,8,22,.75) 65%, rgba(5,8,22,.92) 100%);
+}
+
+.hub-card-num {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.55);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    z-index: 2;
+}
+
+.hub-card-heading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    z-index: 1;
+}
+
+.hub-card-heading span {
+    font-size: 26px;
+    line-height: 1.15;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,.14);
+    text-shadow: 0 1px 0 rgba(255,255,255,.06);
+}
+
+.hub-card-footer {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.hub-card:hover .hub-card-footer,
+.hub-card:focus-visible .hub-card-footer,
+.hub-card.hub-card-pressed .hub-card-footer {
+    opacity: 1;
+}
+
+.hub-card-title {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.hub-card-link {
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.hub-card:hover {
+    border-color: rgba(255,204,71,.5);
+}
+
+.hub-card:active {
+    border-color: rgba(255,204,71,.5);
+}
+
+.hub-card:hover .hub-card-link,
+.hub-card:active .hub-card-link {
+    text-shadow: 0 0 8px rgba(255,204,71,.6);
+}
+
+/* Кастомизация фона под конкретную карточку через data-атрибут в HTML:
+   <div class="hub-card" data-bg="assets/hub/tiertest.jpg"> — если картинки ещё
+   нет, фон просто остаётся тёмным (background-color из .hub-card-bg). */
+
+.hub-detail {
+    display: none;
+    animation: fadeInSubTab 0.2s ease;
+}
+
+.hub-detail.active {
+    display: block;
+}
+
+.hub-detail-back {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    background: var(--sidebar-item);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-bottom: 18px;
+    vertical-align: middle;
+}
+
+.hub-detail-back:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ==========================================================================
    АДАПТИВНОСТЬ ДЛЯ МОБИЛЬНЫХ ЭКРАНОВ (max-width: 768px)
    ========================================================================== */
 @media(max-width: 768px) {
@@ -1135,29 +1657,34 @@ body, html {
     .filters, .filters-row-2 { grid-template-columns: 1fr; gap: 8px; }
     
     .player-card-row {
-        flex-direction: column;
-        align-items: stretch;
+        padding: 12px;
         gap: 12px;
-        padding: 14px;
     }
-    
-    .player-name-block {
-        justify-content: space-between;
-        width: 100%;
-        min-width: 0;
+
+    .player-portrait {
+        width: 56px;
+        height: 56px;
     }
-    
-    .player-center-block {
-        width: 100%;
+
+    .player-name {
+        font-size: 15px;
     }
-    
+
     .player-right {
-        margin-left: 0;
-        text-align: right;
-        width: 100%;
-        border-top: 1px solid var(--border-color);
-        padding-top: 10px;
-        justify-content: flex-start;
+        font-size: 13px;
+    }
+
+    .player-tiers-row {
+        gap: 6px;
+    }
+
+    .tier-item-box {
+        width: 34px;
+    }
+
+    .tier-icon-circle {
+        width: 26px;
+        height: 26px;
     }
     
     .modal-grid {
@@ -1172,5 +1699,20 @@ body, html {
     .info-nav-btn {
         width: 100%;
         text-align: center;
+    }
+}
+
+/* ==========================================================================
+   УВАЖЕНИЕ К prefers-reduced-motion
+   Для пользователей/устройств, которым лишние анимации мешают или
+   нагружают слабое железо - отключаем декоративные эффекты, оставляя
+   только мгновенные состояния.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
     }
 }
