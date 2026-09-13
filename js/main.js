@@ -33,7 +33,7 @@ function toggleTheme() {
     document.documentElement.setAttribute('data-theme', targetTheme);
     const btn = document.getElementById('themeToggleBtn');
     if (btn) {
-        btn.innerHTML = targetTheme === 'light' ? '🌙 Темная тема' : '☀️ Светлая тема';
+        btn.innerHTML = targetTheme === 'light' ? 'Темная тема' : 'Светлая тема';
     }
 }
 
@@ -41,30 +41,130 @@ function toggleTheme() {
 // 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И ПАРСИНГ ТИРОВ
 // ==========================================
 
-// Универсальный парсер данных тира
-function parseTierInfo(tierData) {
+// Порядок тиров от старшего к младшему. Единый источник правды для
+// сравнений тиров и для определения, какие тиры вообще могут быть Retired.
+const TIER_ORDER = ['HT1', 'LT1', 'HT2', 'LT2', 'HT3', 'LT3', 'HT4', 'LT4', 'HT5', 'LT5'];
+
+// Retired-статус (ручной или автоматический по сроку) возможен только
+// начиная с HT3 и выше: HT1, LT1, HT2, LT2, HT3.
+const RETIRED_ELIGIBLE_TIERS = TIER_ORDER.slice(0, TIER_ORDER.indexOf('HT3') + 1);
+
+// Через сколько дней без пересдачи кит автоматически считается Retired
+const RETIRED_AUTO_DAYS = 60;
+
+// Проверка: истёк ли срок с даты последнего теста по киту (>60 дней)
+function isDateExpired(dateStr) {
+    if (!dateStr) return false;
+    const testDate = new Date(dateStr);
+    if (isNaN(testDate.getTime())) return false;
+
+    const diffMs = Date.now() - testDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays > RETIRED_AUTO_DAYS;
+}
+
+// ==========================================
+// ШТРАФНЫЕ ОЧКИ (только для HT3+ тестов, см. penalty_logic.py на боте)
+// ==========================================
+
+// Через сколько дней с даты ПЕРВОГО начисления в текущем цикле весь
+// накопленный штраф по киту истекает целиком (обнуляется). Должно совпадать
+// с PENALTY_EXPIRY_DAYS в bot_config.py.
+const PENALTY_EXPIRY_DAYS = 30;
+
+// Порог автопонижения - должен совпадать с PENALTY_DEMOTION_THRESHOLD в bot_config.py
+const PENALTY_DEMOTION_THRESHOLD = 2.0;
+
+// Та же проверка истечения цикла штрафов, что и isDateExpired, но со своим
+// порогом (30 дней вместо 60) - вынесена отдельно для ясности читаемого кода
+function isPenaltyCycleExpired(dateStr) {
+    if (!dateStr) return false;
+    const startDate = new Date(dateStr);
+    if (isNaN(startDate.getTime())) return false;
+
+    const diffMs = Date.now() - startDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays > PENALTY_EXPIRY_DAYS;
+}
+
+// Возвращает актуальные (не истёкшие) штрафные очки игрока по одному киту.
+// penaltyEntry - { points, firstPenaltyDate } или undefined/null.
+// Порт effective_penalty_points() из penalty_logic.py - истёкший цикл
+// показывает 0, даже если бот ещё не записал это явно в players.js
+// (обнуление на боте происходит лениво, только при следующем начислении).
+function getEffectivePenalty(player, kit) {
+    if (!player || !player.penaltyByKit) return 0;
+    const entry = player.penaltyByKit[kit];
+    if (!entry) return 0;
+    if (isPenaltyCycleExpired(entry.firstPenaltyDate)) return 0;
+    return entry.points || 0;
+}
+
+// Суммарные актуальные штрафные очки игрока по ВСЕМ китам сразу
+// (для отображения общего числа в шапке профиля)
+function getTotalEffectivePenalty(player) {
+    if (!player || !player.penaltyByKit) return 0;
+    let total = 0;
+    for (const kit in player.penaltyByKit) {
+        total += getEffectivePenalty(player, kit);
+    }
+    return total;
+}
+
+// Универсальный парсер данных тира.
+// Поддерживает новый формат { tier, date, retired } и, для обратной
+// совместимости, старый формат в виде строки ("HT3" / "RHT3").
+// Также защищается от испорченных данных с ДВОЙНОЙ вложенностью
+// ({ tier: { tier, date, retired }, date, retired } - баг старой
+// версии базы/миграции) - в этом случае разворачивает объект рекурсивно,
+// а не печатает "[object Object]" в интерфейсе.
+function parseTierInfo(tierData, _depth = 0) {
     if (!tierData) return { tier: "Unranked", isRetired: false, pts: 0 };
-    
+
+    // Защита от бесконечной рекурсии на совсем битых данных
+    if (_depth > 5) return { tier: "Unranked", isRetired: false, pts: 0 };
+
     let tier = "Unranked";
-    let isRetired = false;
+    let manualRetired = false;
+    let testDate = null;
 
     if (typeof tierData === 'string') {
+        // Старый формат-строка (данные до миграции) - поддерживаем на всякий случай
         if (tierData.startsWith('R') && tierData.length > 1) {
-            isRetired = true;
+            manualRetired = true;
             tier = tierData.substring(1);
         } else {
             tier = tierData;
         }
     } else if (typeof tierData === 'object') {
-        tier = tierData.tier || "Unranked";
-        isRetired = tierData.retired === true;
+        if (tierData.tier && typeof tierData.tier === 'object') {
+            // Двойная вложенность: внутренний объект содержит настоящий
+            // tier/date/retired - разворачиваем его рекурсивно и берём
+            // date/retired снаружи как fallback, если внутри их нет.
+            const inner = parseTierInfo(tierData.tier, _depth + 1);
+            tier = inner.tier;
+            testDate = inner.date || tierData.date || null;
+            manualRetired = inner.isRetired || tierData.retired === true;
+        } else {
+            tier = tierData.tier || "Unranked";
+            manualRetired = tierData.retired === true;
+            testDate = tierData.date || null;
+        }
     }
+
+    // Retired ниже HT3 невозможен в принципе, независимо от того, что
+    // записано в базе (защита от рассинхрона/старых данных)
+    const eligibleForRetired = RETIRED_ELIGIBLE_TIERS.includes(tier);
+
+    const autoRetiredByDate = eligibleForRetired && isDateExpired(testDate);
+    const isRetired = eligibleForRetired && (manualRetired || autoRetiredByDate);
 
     // Безопасное получение очков
     const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
     return {
         tier: tier,
         isRetired: isRetired,
+        date: testDate,
         pts: activePts[tier] || 0
     };
 }
@@ -183,7 +283,7 @@ function getMetaTierTag(tier, isRetired = false) {
 function isTester(playerName) {
     if (!playerName) return false;
     const nameLower = playerName.toLowerCase();
-    const testers = ["-999-", "zor1kkqwix", "_xx_deras_xx"];
+    const testers = ["-999-", "zor1kkqwix", "_xx_deras_xx", "-back-"];
     return testers.includes(nameLower);
 }
 
@@ -253,7 +353,19 @@ function openProfile(idx, filteredPlayersJSON) {
                 roleContainer.innerHTML = '';
             }
         }
-        
+
+        // Общие штрафные очки игрока (сумма по всем китам, только актуальные/не истёкшие)
+        const totalPenalty = getTotalEffectivePenalty(player);
+        const modalPenaltyTotal = document.getElementById('modalPenaltyTotal');
+        if (modalPenaltyTotal) {
+            if (totalPenalty > 0) {
+                modalPenaltyTotal.innerText = `Штрафные очки: ${totalPenalty}`;
+                modalPenaltyTotal.style.display = '';
+            } else {
+                modalPenaltyTotal.style.display = 'none';
+            }
+        }
+
         const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
         const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
         const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
@@ -265,6 +377,10 @@ function openProfile(idx, filteredPlayersJSON) {
                 const t = getCleanTier(player, kit);
                 const iconSrc = activeKitImages[kit] || "";
                 const ret = isKitRetired(player, kit);
+                const kitPenalty = getEffectivePenalty(player, kit);
+                const penaltyHTML = kitPenalty > 0
+                    ? `<span class="m-penalty-box" title="Штрафные очки по этому киту (сброс через ${PENALTY_EXPIRY_DAYS} дней с первого начисления, понижение при ${PENALTY_DEMOTION_THRESHOLD})">⚠ ${kitPenalty}</span>`
+                    : '';
                 return `<div class="modal-row" style="${ret ? 'opacity:0.6;' : ''}">
                     <div class="modal-kit-left">
                         <img class="modal-kit-icon" src="${iconSrc}" onerror="this.style.opacity='0'" alt="">
@@ -273,6 +389,7 @@ function openProfile(idx, filteredPlayersJSON) {
                     <div class="m-right-side">
                         ${getTierBadge(t, ret)} 
                         <span class="m-pts-box">(${activePts[t] || 0} PTS)</span>
+                        ${penaltyHTML}
                     </div>
                 </div>`;
             }).join('');
@@ -284,6 +401,10 @@ function openProfile(idx, filteredPlayersJSON) {
                 const t = getCleanTier(player, kit);
                 const iconSrc = activeKitImages[kit] || "";
                 const ret = isKitRetired(player, kit);
+                const kitPenalty = getEffectivePenalty(player, kit);
+                const penaltyHTML = kitPenalty > 0
+                    ? `<span class="m-penalty-box" title="Штрафные очки по этому киту (сброс через ${PENALTY_EXPIRY_DAYS} дней с первого начисления, понижение при ${PENALTY_DEMOTION_THRESHOLD})">⚠ ${kitPenalty}</span>`
+                    : '';
                 return `<div class="modal-row" style="${ret ? 'opacity:0.6;' : ''}">
                     <div class="modal-kit-left">
                         <img class="modal-kit-icon" src="${iconSrc}" onerror="this.style.opacity='0'" alt="">
@@ -292,6 +413,7 @@ function openProfile(idx, filteredPlayersJSON) {
                     <div class="m-right-side">
                         ${getTierBadge(t, ret)} 
                         <span class="m-pts-box">(${activePts[t] || 0} PTS)</span>
+                        ${penaltyHTML}
                     </div>
                 </div>`;
             }).join('');
@@ -302,6 +424,11 @@ function openProfile(idx, filteredPlayersJSON) {
         
         const modalSubTotal = document.getElementById('modalSubTotal');
         if (modalSubTotal) modalSubTotal.innerText = `Всего за Sub: ${calcPoints(player, activeSubtiers)} PTS`;
+
+        const modalDuelsRows = document.getElementById('modalDuelsRows');
+        if (modalDuelsRows) {
+            modalDuelsRows.innerHTML = renderDuelsList(player.matchHistory, { showKit: true });
+        }
         
         const profileModal = document.getElementById('profileModal');
         if (profileModal) profileModal.classList.add('active');
@@ -340,17 +467,13 @@ function renderPlayers() {
         return;
     }
 
-    const titleEl = document.getElementById('leaderboardTitle');
     const subtitleEl = document.getElementById('tableSubtitle');
 
     if (targetKit === 'all') {
-        if (titleEl) titleEl.innerText = 'MAIN OVERALL PVP TOP';
         if (subtitleEl) subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
     } else if (targetKit === 'sub-all') {
-        if (titleEl) titleEl.innerText = 'SUB OVERALL PVP TOP';
         if (subtitleEl) subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
     } else {
-        if (titleEl) titleEl.innerText = `${targetKit.toUpperCase()} TOP`;
         if (subtitleEl) subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
     }
 
@@ -438,7 +561,11 @@ function renderPlayers() {
         } else {
             const currentTier = getCleanTier(player, targetKit);
             const ret = isKitRetired(player, targetKit);
-            rightColumnContent = getTierBadge(currentTier, ret);
+            const kitPenalty = getEffectivePenalty(player, targetKit);
+            const penaltyBadge = kitPenalty > 0
+                ? `<span class="m-penalty-box" title="Штрафные очки по этому киту">⚠ ${kitPenalty}</span>`
+                : '';
+            rightColumnContent = getTierBadge(currentTier, ret) + penaltyBadge;
         }
 
         let quickTiersHTML = '';
@@ -530,21 +657,26 @@ function renderPlayers() {
         htmlFragment += `
         <div class="player-container ${topClass}">
             <div class="player-card-row" onclick="openProfile(${index}, '${filteredJSON}')">
-                
-                <div class="player-name-block">
-                    <span class="player-rank">${rankPrefix}</span>
-                    <span class="player-name">${player.name}</span>
+
+                <div class="player-portrait">
+                    <img src="assets/skins/${encodeURIComponent(player.name)}.png" onerror="this.onerror=null; this.src='assets/default_skin.png';" alt="">
                 </div>
 
-                <div class="player-center-block">
+                <div class="player-info-column">
+                    <div class="player-info-top">
+                        <div class="player-name-block">
+                            <span class="player-rank">${rankPrefix}</span>
+                            <span class="player-name">${player.name}</span>
+                        </div>
+                        <div class="player-right">
+                            ${rightColumnContent}
+                        </div>
+                    </div>
+
                     <div class="player-meta-box">
                         ${metaTagsHTML}
                     </div>
                     ${quickTiersHTML}
-                </div>
-
-                <div class="player-right">
-                    ${rightColumnContent}
                 </div>
 
             </div>
@@ -575,48 +707,6 @@ function buildFaqTable() {
     }).join('');
 }
 
-// Навешивание кастомных цветов на тиры внутри FAQ текста
-function applyFaqTierColors() {
-    const tiersToColor = ['HT1', 'HT2', 'LT1', 'LT2', 'LT3'];
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    
-    tiersToColor.forEach(tier => {
-        const color = activeColors[tier] || 'var(--accent)';
-        for (let i = 1; i <= 4; i++) {
-            const element = document.getElementById(`faqColor${tier}_${i}`);
-            if (element) {
-                element.style.color = color;
-                element.style.fontWeight = 'bold';
-            }
-        }
-    });
-}
-
-// Навигация по под-вкладкам внутри Информации
-function switchInfoSubTab(subTabId, btnElement) {
-    document.querySelectorAll('.info-sub-tab-content').forEach(subTab => {
-        subTab.style.display = 'none';
-    });
-    document.querySelectorAll('.info-nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    const targetSubTab = document.getElementById(subTabId);
-    if (targetSubTab) {
-        targetSubTab.style.display = 'block';
-    }
-    if (btnElement) {
-        btnElement.classList.add('active');
-    }
-    
-    if (subTabId === 'ptsSubTab') {
-        buildFaqTable();
-    }
-    if (subTabId === 'faqSubTab') {
-        applyFaqTierColors();
-    }
-}
-
 // ==========================================
 // 6. НАВИГАЦИЯ И ИНИЦИАЛИЗАЦИЯ
 // ==========================================
@@ -639,11 +729,12 @@ function switchTab(tabId) {
     } else {
         const target = document.getElementById(tabId);
         if (target) target.style.display = 'block';
-        
-        if (tabId === 'infoCenterTab') {
-            const firstNavBtn = document.querySelector('.info-nav-btn');
-            switchInfoSubTab('tierTestSubTab', firstNavBtn);
-        }
+
+        // При входе в "Тестирование" / "Другую информацию" всегда
+        // показываем сетку карточек, а не ранее открытую деталь
+        if (tabId === 'testingTab') resetHubGrid('testingHubGrid');
+        if (tabId === 'otherInfoTab') resetHubGrid('otherInfoHubGrid');
+        if (tabId === 'duelsTab') renderGlobalDuels();
     }
     window.scrollTo(0, 0);
 }
@@ -651,6 +742,110 @@ function switchTab(tabId) {
 function backHome() {
     switchTab('mainPage');
 }
+
+// ==========================================
+// ХАБ-КАРТОЧКИ ("Тестирование" / "Другая информация")
+// ==========================================
+
+// Соответствие id сетки → id заголовка и вводного текста над ней,
+// которые нужно прятать при открытии конкретной карточки
+const HUB_HEADER_IDS = {
+    testingHubGrid: ['testingHubTitle', 'testingHubIntro'],
+    otherInfoHubGrid: ['otherInfoHubTitle', 'otherInfoHubIntro']
+};
+
+// Скрывает все открытые hub-detail внутри вкладки и возвращает сетку карточек
+function resetHubGrid(gridId) {
+    const grid = document.getElementById(gridId);
+    if (grid) grid.style.display = 'flex';
+
+    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
+
+    const tab = grid ? grid.closest('.tab-content') : null;
+    if (!tab) return;
+
+    tab.querySelectorAll('.hub-detail').forEach(detail => {
+        detail.classList.remove('active');
+    });
+}
+
+// Открывает конкретную карточку (по data-target), пряча сетку
+function openHubDetail(gridId, detailId) {
+    const grid = document.getElementById(gridId);
+    if (grid) grid.style.display = 'none';
+
+    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    const tab = grid ? grid.closest('.tab-content') : null;
+    if (tab) {
+        tab.querySelectorAll('.hub-detail').forEach(d => d.classList.remove('active'));
+    }
+
+    const detail = document.getElementById(detailId);
+    if (detail) detail.classList.add('active');
+
+    // PTS-таблица собирается динамически — на случай если карточку открыли впервые
+    if (detailId === 'hubPoints' && typeof buildFaqTable === 'function') {
+        buildFaqTable();
+    }
+
+    window.scrollTo(0, 0);
+}
+
+// Возврат из детали к сетке карточек внутри той же вкладки
+function closeHubDetail(gridId, detailId) {
+    const detail = document.getElementById(detailId);
+    if (detail) detail.classList.remove('active');
+
+    const grid = document.getElementById(gridId);
+    if (grid) grid.style.display = 'flex';
+
+    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    });
+
+    window.scrollTo(0, 0);
+}
+
+// Клик по самой карточке (делегирование на весь .hub-grid)
+document.querySelectorAll('.hub-grid').forEach(grid => {
+    grid.addEventListener('click', (e) => {
+        const card = e.target.closest('.hub-card');
+        if (!card) return;
+        const targetId = card.getAttribute('data-target');
+        if (targetId) openHubDetail(grid.id, targetId);
+    });
+
+    // Долгое нажатие (удержание) на touch-устройствах показывает подпись
+    // карточки ("Читать →"), не открывая раздел — как на десктопном hover.
+    let pressTimer = null;
+    const LONG_PRESS_MS = 250;
+
+    grid.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.hub-card');
+        if (!card) return;
+        pressTimer = setTimeout(() => {
+            card.classList.add('hub-card-pressed');
+        }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    grid.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+        grid.querySelectorAll('.hub-card-pressed').forEach(c => c.classList.remove('hub-card-pressed'));
+    });
+
+    grid.addEventListener('touchmove', () => {
+        clearTimeout(pressTimer);
+        grid.querySelectorAll('.hub-card-pressed').forEach(c => c.classList.remove('hub-card-pressed'));
+    }, { passive: true });
+});
 
 // Работа с боковым меню (Sidebar)
 const menuBtn = document.getElementById('menuBtn');
@@ -677,9 +872,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) searchInput.addEventListener('input', renderPlayers);
     if (retiredToggle) retiredToggle.addEventListener('change', renderPlayers);
 
-    // Универсальная инициализация кастомного выпадающего списка
-    function initCustomDropdown(prefix, stateKey, defaultValue) {
+    // Универсальная инициализация кастомного выпадающего списка.
+    // onChangeCallback по умолчанию renderPlayers (главная страница);
+    // передаётся отдельно для фильтров на других вкладках (напр. "Дуэли").
+    function initCustomDropdown(prefix, stateKey, defaultValue, onChangeCallback) {
         window[stateKey] = defaultValue;
+        const callback = onChangeCallback || renderPlayers;
 
         const customEl = document.getElementById(prefix + 'Custom');
         const triggerEl = document.getElementById(prefix + 'Trigger');
@@ -706,7 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 labelEl.textContent = opt.textContent;
                 customEl.classList.remove('open');
 
-                renderPlayers();
+                callback();
             });
         });
 
@@ -722,6 +920,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Фильтр региона
     initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
+
+    // Фильтр китов во вкладке "Дуэли"
+    initCustomDropdown('duelsKitFilter', 'currentDuelsKitFilter', 'all', renderGlobalDuels);
+
+    // Поиск во вкладке "Дуэли"
+    const duelsSearchInput = document.getElementById('duelsSearchInput');
+    if (duelsSearchInput) duelsSearchInput.addEventListener('input', renderGlobalDuels);
 
     // Первичный запуск отрисовки
     initSite();
@@ -764,6 +969,212 @@ function copyInviteCode() {
             }, 1500);
         }
     });
+}
+
+// ==========================================
+// ДУЭЛИ (matchHistory) - используется и в профиле игрока, и во
+// вкладке "Дуэли" (глобальный список по всем игрокам)
+// ==========================================
+
+// Приводит запись matchHistory к единому виду, независимо от того, какой
+// версией бота она была записана: старые записи используют поля
+// tester/scoreTester (реликт до перехода на терминологию "Оппонент",
+// когда соперником всегда был тестер), новые - opponent/scoreOpponent.
+// Аналогично winner: старое значение "tester" равнозначно "opponent".
+function normalizeDuelEntry(entry) {
+    const opponent = entry.opponent !== undefined ? entry.opponent : entry.tester;
+    const scoreOpponent = entry.scoreOpponent !== undefined ? entry.scoreOpponent : entry.scoreTester;
+    const winner = entry.winner === 'tester' ? 'opponent' : entry.winner;
+    return { ...entry, opponent, scoreOpponent, winner };
+}
+
+// Собирает уникальный список дуэлей со всех игроков. Каждая дуэль хранится
+// СИММЕТРИЧНО в matchHistory обоих участников (см. main.py на боте), но
+// с ПРОТИВОПОЛОЖНЫМ tierBefore/tierAfter - у тестируемого (того, кто
+// реально сдавал тест на этой дуэли) ранг меняется, у соперника обычно
+// нет. Поэтому среди двух симметричных записей выбираем ту, где
+// tierBefore !== tierAfter - её "playerName" и есть тестируемый, что
+// сохраняет порядок "игрок, затем оппонент" из исходного шаблона
+// результата. Если обе записи имеют tierBefore === tierAfter (обычная
+// дуэль без изменения ранга ни у кого) - порядок не принципиален, берём
+// первую попавшуюся по порядку players.js.
+function collectGlobalDuels() {
+    if (typeof players === 'undefined' || !Array.isArray(players)) return [];
+
+    const groups = new Map();
+
+    players.forEach(player => {
+        const history = Array.isArray(player.matchHistory) ? player.matchHistory : [];
+        history.forEach(raw => {
+            if (!raw || raw.opponent === 'система' || raw.tester === 'система') return;
+            const entry = normalizeDuelEntry(raw);
+            if (!entry.opponent) return;
+
+            const namesKey = [player.name, entry.opponent].sort().join('|');
+            const key = `${entry.kit}|${entry.date}|${namesKey}|${[entry.scorePlayer, entry.scoreOpponent].sort().join('-')}`;
+
+            const candidate = { ...entry, playerName: player.name };
+            const existing = groups.get(key);
+
+            if (!existing) {
+                groups.set(key, candidate);
+                return;
+            }
+
+            // Предпочитаем запись тестируемого (у кого ранг реально менялся)
+            const candidateIsTested = candidate.tierBefore !== candidate.tierAfter;
+            const existingIsTested = existing.tierBefore !== existing.tierAfter;
+            if (candidateIsTested && !existingIsTested) {
+                groups.set(key, candidate);
+            }
+        });
+    });
+
+    return Array.from(groups.values());
+}
+
+// Строит HTML-блок с рангами дуэли (предыдущий → полученный), если они
+// зафиксированы в записи. Показывается только когда тир реально менялся
+// в контексте этого результата (в самой дуэли, а не когда tierBefore
+// просто равен tierAfter - тогда это не несёт информации).
+// Строит HTML-блок с рангами дуэли. Всегда показывает актуальный
+// ранг игрока на этом ките - если он изменился в рамках дуэли (обычно
+// у тестируемого), показывает "было → стало"; если нет (обычная дуэль
+// без теста, ранг уже был таким), показывает его одним значением, без
+// стрелки - но никогда не оставляет блок пустым.
+function buildDuelTierChangeHTML(entry) {
+    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
+    const before = entry.tierBefore || 'Unranked';
+    const after = entry.tierAfter || before;
+    const colorAfter = activeColors[after] || 'var(--accent)';
+
+    if (before === after) {
+        return `<div class="duel-tier-change">
+            <span style="color:${colorAfter}; font-weight:700;">${after}</span>
+        </div>`;
+    }
+
+    const colorBefore = activeColors[before] || 'var(--text-muted)';
+    return `<div class="duel-tier-change">
+        <span style="color:${colorBefore};">${before}</span>
+        <span class="duel-tier-arrow">→</span>
+        <span style="color:${colorAfter}; font-weight:700;">${after}</span>
+    </div>`;
+}
+
+// Рендер вкладки "Дуэли" — применяет поиск (по игроку/оппоненту) и фильтр
+// по киту, показывает имя ОБОИХ участников в строке (в отличие от профиля,
+// где "я" подразумевается контекстом модалки).
+function renderGlobalDuels() {
+    const container = document.getElementById('globalDuelsList');
+    if (!container) return;
+
+    const searchInput = document.getElementById('duelsSearchInput');
+    const search = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    const kitFilter = window.currentDuelsKitFilter || 'all';
+
+    let duels = collectGlobalDuels();
+
+    if (kitFilter !== 'all') {
+        duels = duels.filter(d => d.kit === kitFilter);
+    }
+    if (search) {
+        duels = duels.filter(d =>
+            d.playerName.toLowerCase().includes(search) ||
+            String(d.opponent).toLowerCase().includes(search)
+        );
+    }
+
+    duels.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+    if (duels.length === 0) {
+        container.innerHTML = `<p class="duels-empty">Дуэли не найдены.</p>`;
+        return;
+    }
+
+    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    container.innerHTML = duels.map(entry => {
+        const won = entry.winner === 'player';
+        const resultClass = won ? 'duel-win' : 'duel-loss';
+        const commentHTML = entry.comment ? `<div class="duel-comment">${entry.comment}</div>` : '';
+        const tierChangeHTML = buildDuelTierChangeHTML(entry);
+        const playerSafe = String(entry.playerName).replace(/'/g, "\\'");
+        const opponentSafe = String(entry.opponent).replace(/'/g, "\\'");
+
+        return `<div class="duel-row ${resultClass}">
+            <div class="duel-row-top">
+                <div class="duel-kit">
+                    <img class="duel-kit-icon" src="${activeKitImages[entry.kit] || ''}" onerror="this.style.display='none';" alt="">
+                    <span>${entry.kit}</span>
+                </div>
+                <span class="duel-date">${entry.date || ''}</span>
+            </div>
+            <div class="duel-row-main">
+                <span class="duel-opponent-name" onclick="openProfileByName('${playerSafe}')">${entry.playerName}</span>
+                <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
+                <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
+            </div>
+            ${tierChangeHTML}
+            ${commentHTML}
+        </div>`;
+    }).join('');
+}
+
+// Одна запись дуэли -> HTML-строка. showKit=true добавляет иконку/название
+// кита (нужно во вкладке "Дуэли", где записи вперемешку по разным китам;
+// в профиле игрока кит и так виден из контекста блока Main/Sub Tiers выше,
+// но параметр всё равно поддерживается на будущее).
+function renderDuelRow(rawEntry, showKit) {
+    const entry = normalizeDuelEntry(rawEntry);
+    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const won = entry.winner === 'player';
+    const resultClass = won ? 'duel-win' : 'duel-loss';
+    const resultLabel = won ? 'Победа' : 'Поражение';
+
+    const kitHTML = showKit
+        ? `<div class="duel-kit">
+                <img class="duel-kit-icon" src="${activeKitImages[entry.kit] || ''}" onerror="this.style.display='none';" alt="">
+                <span>${entry.kit}</span>
+           </div>`
+        : '';
+
+    const commentHTML = entry.comment
+        ? `<div class="duel-comment">${entry.comment}</div>`
+        : '';
+
+    const tierChangeHTML = buildDuelTierChangeHTML(entry);
+    const opponentSafe = String(entry.opponent).replace(/'/g, "\\'");
+
+    return `<div class="duel-row ${resultClass}">
+        <div class="duel-row-top">
+            ${kitHTML}
+            <span class="duel-date">${entry.date || ''}</span>
+        </div>
+        <div class="duel-row-main">
+            <span class="duel-opponent-label">против</span>
+            <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
+            <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
+            <span class="duel-result-badge">${resultLabel}</span>
+        </div>
+        ${tierChangeHTML}
+        ${commentHTML}
+    </div>`;
+}
+
+// Список дуэлей игрока (используется в профиле). Системные записи
+// автопонижения (opponent/tester === "система") сюда не относятся - это
+// не дуэль, а служебное событие, поэтому исключаются из списка.
+function renderDuelsList(matchHistory, opts = {}) {
+    const showKit = !!opts.showKit;
+    const list = Array.isArray(matchHistory) ? matchHistory : [];
+    const duels = list.filter(e => e && e.opponent !== 'система' && e.tester !== 'система');
+
+    if (duels.length === 0) {
+        return `<p class="duels-empty">Дуэлей пока нет.</p>`;
+    }
+
+    const sorted = [...duels].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return sorted.map(entry => renderDuelRow(entry, showKit)).join('');
 }
 
 // Запуск сайта
