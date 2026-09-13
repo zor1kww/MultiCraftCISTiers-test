@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="yandex-verification" content="9fd64b1c1badb957" />
+    <title>MultiCraftCISTiers — Лидерборд PVP для мобильных игроков</title>
+    <meta name="description" content="Официальный рейтинг мобильных игроков MultiCraft PVP. Проверь свой уровень, участвуй в тирах, занимай топовые позиции.">
+    <meta name="keywords" content="MultiCraft PVP, лидерборд, тиры, мобильные игроки, MultiCraft, рейтинг, Hardcore, Manhunt">
+    <meta name="author" content="MultiCraftCISTiers">
+    <meta name="theme-color" content="#070b17">
+    <meta property="og:title" content="MultiCraftCISTiers — PVP Leaderboard">
+    <meta property="og:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft. Узнай свой рейтинг и соревнуйся с лучшими.">
+    <meta property="og:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
+    <meta property="og:url" content="https://zor1kww.github.io/MultiCraftCISTiers/">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MultiCraftCISTiers — PVP Leaderboard">
+    <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
+    <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
+    <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
+    <link rel="stylesheet" href="css/style.css?v=1.0.4">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MultiCraftCISTiers",
+        "description": "Официальный лидерборд мобильных игроков MultiCraft PVP",
+        "url": "https://zor1kww.github.io/MultiCraftCISTiers/",
+        "applicationCategory": "GamesApp",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Organization",
+            "name": "MultiCraftCISTiers"
+        }
+    }
+    </script>
+</head>
+<body>
+
+<div class="modal-overlay" id="profileModal" onclick="closeModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title-box">
+                <h2 id="modalPlayerName">Игрок</h2>
+                <p id="modalPlayerMeta">RU PC</p>
+                <p id="modalPenaltyTotal" class="modal-penalty-total" style="display:none;"></p>
+                <div id="modalRoleContainer"></div>
+            </div>
+            <button class="close-modal-btn" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-grid">
+                <div class="modal-block">
+                    <h4>Main Tiers</h4>
+                    <div id="modalMainRows"></div>
+                    <div class="modal-block-footer" id="modalMainTotal">Всего за Main: 0 PTS</div>
+                </div>
+                <div class="modal-block">
+                    <h4>Sub Tiers</h4>
+                    <div id="modalSubRows"></div>
+                    <div class="modal-block-footer" id="modalSubTotal">Всего за Sub: 0 PTS</div>
+                </div>
+            </div>
+
+            <div class="modal-block modal-duels-block">
+                <h4>Дуэли</h4>
+                <div id="modalDuelsRows" class="duels-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <h3>Навигация</h3>
+    <a href="#" onclick="switchTab('mainPage')">Главная</a>
+    <a href="#" onclick="switchTab('duelsTab')">Дуэли</a>
+    <a href="#" onclick="switchTab('testingTab')">Тестирование</a>
+    <a href="#" onclick="switchTab('otherInfoTab')">Другая информация</a>
+    <a href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
+    
+    <div class="theme-toggle-container">
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">Светлая тема</button>
+        <button class="theme-toggle-btn" id="inviteBtn" onclick="copyInviteCode()" style="margin-top: 10px;">UA75LL01</button>
+    </div>
+</div>
+
+<header class="header">
+    <div class="logo">MultiCraftCISTiers</div>
+    <div class="header-right">
+        <button class="menu-btn" id="menuBtn">Меню</button>
+    </div>
+</header>
+
+<div class="main-page" id="mainPage" style="display: block;">
+    <div class="hero">
+        <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Прогрессируйте, сдавайте тесты квалифицированным тестерам и занимайте топовые позиции.</p>
+
+        <div class="tg-wrapper">
+            <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
+        </div>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="Поиск игрока...">
+            
+            <div class="custom-select" id="kitFilterCustom">
+                <button type="button" class="custom-select-trigger" id="kitFilterTrigger">
+                    <span id="kitFilterLabel">Main Kits</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="kitFilterPanel">
+                    <div class="custom-select-group-label custom-select-option selected" data-value="all">Main Kits</div>
+                    <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
+                    <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
+                    <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
+                    <div class="custom-select-option" data-value="Beast">Beast</div>
+                    <div class="custom-select-option" data-value="Emerald">Emerald</div>
+                    <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
+                    <div class="custom-select-option" data-value="RVM">RVM</div>
+                    <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
+                    <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
+                    <div class="custom-select-option" data-value="SMP">SMP</div>
+                    <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
+                    <div class="custom-select-group-label custom-select-option" data-value="sub-all">Sub Kits</div>
+                    <div class="custom-select-option" data-value="Combo">Combo</div>
+                    <div class="custom-select-option" data-value="Gapple">Gapple</div>
+                    <div class="custom-select-option" data-value="Mace">Mace</div>
+                    <div class="custom-select-option" data-value="Crystal">Crystal</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="filters-row-2">
+            <div class="custom-select" id="regionFilterCustom">
+                <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
+                    <span id="regionFilterLabel">Все регионы СНГ</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="regionFilterPanel">
+                    <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
+                    <div class="custom-select-option" data-value="RU">RU</div>
+                    <div class="custom-select-option" data-value="UA">UA</div>
+                    <div class="custom-select-option" data-value="BY">BY</div>
+                    <div class="custom-select-option" data-value="KZ">KZ</div>
+                    <div class="custom-select-option" data-value="UZ">UZ</div>
+                    <div class="custom-select-option" data-value="KG">KG</div>
+                    <div class="custom-select-option" data-value="AM">AM</div>
+                    <div class="custom-select-option" data-value="AZ">AZ</div>
+                    <div class="custom-select-option" data-value="MD">MD</div>
+                    <div class="custom-select-option" data-value="TJ">TJ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters-row-3">
+            <label class="checkbox-label">
+                <input type="checkbox" id="retiredToggle" checked>
+                Показывать Retired в топе (наравне по PTS)
+            </label>
+        </div>
+
+        <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
+        <div class="players-list" id="playersList"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     ВКЛАДКА "ДУЭЛИ" — глобальный лог всех дуэлей по всем игрокам
+     ============================================================ -->
+<div class="tab-content" id="duelsTab" style="display: none;">
+    <h2 class="section-title">Дуэли</h2>
+    <p class="hub-intro" id="duelsHubIntro">Все зафиксированные поединки на платформе.</p>
+
+    <div class="filters">
+        <input type="text" id="duelsSearchInput" placeholder="Поиск по игроку или оппоненту...">
+
+        <div class="custom-select" id="duelsKitFilterCustom">
+            <button type="button" class="custom-select-trigger" id="duelsKitFilterTrigger">
+                <span id="duelsKitFilterLabel">Все киты</span>
+                <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="custom-select-panel" id="duelsKitFilterPanel">
+                <div class="custom-select-option selected" data-value="all">Все киты</div>
+                <div class="custom-select-group-label" data-value="main-label">Main Kits</div>
+                <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
+                <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
+                <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
+                <div class="custom-select-option" data-value="Beast">Beast</div>
+                <div class="custom-select-option" data-value="Emerald">Emerald</div>
+                <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
+                <div class="custom-select-option" data-value="RVM">RVM</div>
+                <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
+                <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
+                <div class="custom-select-option" data-value="SMP">SMP</div>
+                <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
+                <div class="custom-select-group-label" data-value="sub-label">Sub Kits</div>
+                <div class="custom-select-option" data-value="Combo">Combo</div>
+                <div class="custom-select-option" data-value="Gapple">Gapple</div>
+                <div class="custom-select-option" data-value="Mace">Mace</div>
+                <div class="custom-select-option" data-value="Crystal">Crystal</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="duels-list duels-list-global" id="globalDuelsList"></div>
+</div>
+
+<!-- ============================================================
+     ВКЛАДКА "ТЕСТИРОВАНИЕ" — 5 карточек-обложек
+     ============================================================ -->
+<div class="tab-content" id="testingTab" style="display: none;">
+        <h2 class="section-title" id="testingHubTitle">Тестирование</h2>
+    <p class="hub-intro" id="testingHubIntro">Выберите раздел, чтобы узнать подробности о прохождении тестов.</p>
+
+    <div class="hub-grid" id="testingHubGrid">
+        <div class="hub-card" data-target="hubHowToTest">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">01</div>
+            <div class="hub-card-heading"><span>КАК ПРОЙТИ<br>ТИРТЕСТ?</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Как пройти тиртест?</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubQualTest">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">02</div>
+            <div class="hub-card-heading"><span>КВАЛИФИКАЦИОННЫЙ<br>ТЕСТ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Квалификационный тест</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubHighTest">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">03</div>
+            <div class="hub-card-heading"><span>HT3+ ТЕСТЫ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Высокий HT3+ тест</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubRules">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">04</div>
+            <div class="hub-card-heading"><span>ПРАВИЛА<br>ПРОВЕДЕНИЯ<br>ТЕСТОВ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Правила проведения тестов</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubTesters">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">05</div>
+            <div class="hub-card-heading"><span>ТЕСТЕРЫ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Тестеры</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 01: Как пройти тиртест -->
+    <div class="hub-detail" id="hubHowToTest">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubHowToTest')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Как пройти тиртест?</div>
+
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 15px;"><strong style="color: var(--accent);">Подача заявки</strong><br>
+            Игрок переходит в нашу Telegram-группу, находит раздел с интересующим его китом и отправляет заявку боту, используя предложенный шаблон.<br>
+            Также можно пройти тест напрямую на сервере, договорившись с тиртестером лично, когда он находится в сети.<br>
+            По итогам успешного прохождения ваш результат фиксируется на сайте, а ранг обновляется.</p>
+
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7;"><strong style="color: var(--accent);">Выбор типа теста</strong><br>
+            В зависимости от того, есть ли у вас уже ранг и какой именно, вы можете попасть на один из двух типов тестирования:</p>
+            <ul style="margin: 10px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+                <li>Если вы новичок и ещё не проходили тест, вы направляетесь на <strong>квалификационный тест</strong>, где получите свой первый ранг.</li>
+                <li>Если у вас уже есть ранг LT3, вы можете продолжить путь через систему <strong>высокого теста</strong>, чтобы подниматься выше.</li>
+            </ul>
+            <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Подробнее о каждом из них — в соответствующих разделах ниже.</p>
+        </div>
+    </div>
+
+    <!-- 02: Квалификационный тест -->
+    <div class="hub-detail" id="hubQualTest">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubQualTest')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Квалификационный тест</div>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
+                Квалификационный тест предназначен для игроков, которые ещё не имеют ранга или хотят получить его с нуля. По результатам теста игроку может быть присвоен ранг от <strong>LT5 до LT3</strong> в зависимости от продемонстрированного скилла.
+            </p>
+            <div class="info-accent-box">
+                Тестирование могут проводить любые тестеры — для этого не требуется наличие специального ранга.<br>
+                Максимальный тир, который можно получить на квалификации — <strong>LT3</strong>.
+            </div>
+            <ul style="margin: 15px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
+                <li>До ранга HT3 испытуемый оценивается по <strong>скиллу</strong>, а не по счёту. Тестер оценивает механику, принятие решений, контроль и другие аспекты игры.</li>
+                <li>Тесты можно проходить <strong>раз в 7 дней</strong>.</li>
+                <li>Тест проходит в формате <strong>до четырёх побед</strong>. Тестер может по своему усмотрению сократить или увеличить количество раундов для более точной оценки.</li>
+                <li>Как только бой заканчивается, тестер присваивает заслуженный тир.</li>
+            </ul>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-top: 15px;">
+                После получения ранга LT3 игрок может подавать заявки на высокий тест (HT3+) и двигаться дальше по цепочке: <strong style="color: var(--accent);">LT3 → HT3 → LT2 → HT2 → LT1 → HT1</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- 03: Высокий HT3+ тест -->
+    <div class="hub-detail" id="hubHighTest">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubHighTest')">← Ко всем разделам</button>
+
+        <div class="info-section">
+            <div class="info-section-title">Процесс высокого теста HT3+</div>
+            <div class="tier-hierarchy">
+                <div class="hierarchy-item"><span class="hierarchy-rank">LT3 → HT3</span><span class="hierarchy-desc">Обыграть одного LT3 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
+                <div class="hierarchy-item"><span class="hierarchy-rank">HT3 → LT2</span><span class="hierarchy-desc">Обыграть одного HT3 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
+                <div class="hierarchy-item"><span class="hierarchy-rank">LT2 → HT2</span><span class="hierarchy-desc">Обыграть одного LT2 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
+                <div class="hierarchy-item"><span class="hierarchy-rank">HT2 → LT1</span><span class="hierarchy-desc">Обыграть одного HT2 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
+            </div>
+
+            <div class="info-accent-box" style="margin-top: 18px;">
+                <strong>LT1 → HT1 (переход в чемпионы)</strong><br><br>
+                Претендент обязан обыграть <strong>всех действующих LT1</strong> с минимальным счётом 4:2 в свою пользу, а также действующего HT1, если таковой имеется.<br><br>
+                HT1 сохраняет свой статус, если проигрывает со счётом 4:3 — в этом случае претендент не получает ранг.<br>
+                Если претендент побеждает чемпиона со счётом 4:2, 4:1 или 4:0, он становится новым HT1, а проигравший чемпион понижается до LT1.
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Замена оппонента при отсутствии нужного ранга</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px;">
+                Если на сервере нет игрока с требуемым рангом, тестируемый может сразиться с оппонентом на один ранг ниже, на один ранг выше или на два ранга выше. Условия зачёта при этом меняются:
+            </p>
+            <table class="faq-table">
+                <thead><tr><th>Ранг оппонента</th><th>Условие зачёта</th></tr></thead>
+                <tbody>
+                    <tr><td>Тот же ранг</td><td>Победа 4:2 или крупнее</td></tr>
+                    <tr><td>На 1 ранг ниже</td><td>Победа 4:1 или крупнее (4:2 не засчитывается)</td></tr>
+                    <tr><td>На 1 ранг выше</td><td>Достаточно проиграть 4:3</td></tr>
+                    <tr><td>На 2 ранга выше</td><td>Достаточно проиграть 4:2</td></tr>
+                </tbody>
+            </table>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
+                <strong>Пример для LT3 → HT3:</strong> нет LT3 — можно сыграть против HT4 (нужна победа 4:1 или 4:0), против HT3 (достаточно проиграть 4:3) или против LT2 (достаточно проиграть 4:2). Правило работает одинаково для всех ступеней цепочки.
+            </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Исключение по решению администрации</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                По решению администрации игрок может пропустить одну или несколько ступеней цепочки и сразу сразиться с оппонентом более высокого ранга, если его уровень игры очевидно выше текущего тира. Решение принимается на основе оценки скилла игрока.
+            </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Система штрафных очков</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
+                Штрафные очки получают оба участника тиртеста в зависимости от исхода матча.
+            </p>
+            <ul style="margin: 0 0 12px 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+                <li><strong>Оппонент</strong> (тот, кто проиграл тестируемому) получает очки, только если он имеет одинаковый или более высокий ранг, чем тестируемый. Если оппонент ниже рангом и проиграл — очки не начисляются.</li>
+                <li><strong>Тестируемый</strong> тоже получает очки за проваленный тиртест — по той же шкале в зависимости от счёта поражения.</li>
+            </ul>
+
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;"><strong style="color: var(--text-main);">Стандартные киты (FT4)</strong></p>
+            <table class="faq-table">
+                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
+                <tbody>
+                    <tr><td>4:3</td><td>0 очков</td></tr>
+                    <tr><td>4:2</td><td>1 очко</td></tr>
+                    <tr><td>4:1</td><td>1.5 очка</td></tr>
+                    <tr><td>4:0</td><td>2 очка</td></tr>
+                </tbody>
+            </table>
+
+            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Combo, SMP, Gapple (FT2)</strong></p>
+            <table class="faq-table">
+                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
+                <tbody>
+                    <tr><td>2:1</td><td>1 очко</td></tr>
+                    <tr><td>2:0</td><td>2 очка</td></tr>
+                </tbody>
+            </table>
+
+            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Dragonhide, Beast, Emerald (FT6)</strong></p>
+            <table class="faq-table">
+                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
+                <tbody>
+                    <tr><td>6:5</td><td>0 очков</td></tr>
+                    <tr><td>6:4</td><td>0.4 очка</td></tr>
+                    <tr><td>6:3</td><td>0.8 очка</td></tr>
+                    <tr><td>6:2</td><td>1.2 очка</td></tr>
+                    <tr><td>6:1</td><td>1.6 очка</td></tr>
+                    <tr><td>6:0</td><td>2 очка</td></tr>
+                </tbody>
+            </table>
+
+            <div class="info-accent-box" style="margin-top: 15px;">
+                При накоплении <strong>2 очков</strong> игрок понижается в ранге на одну ступень, а очки сбрасываются до нуля.<br>
+                Все штрафные очки полностью обнуляются <strong>раз в месяц</strong> — независимо от того, сколько их накопилось.<br>
+                Количество очков отображается в профиле игрока и в топе по конкретным китам.
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Форматы дуэлей по китам</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px;">
+                Формат матча (количество побед, до которого идёт игра) зависит от кита:
+            </p>
+            <table class="faq-table">
+                <thead><tr><th>Киты</th><th>Формат</th></tr></thead>
+                <tbody>
+                    <tr><td>Combo, SMP, Gapple</td><td>FT2 (до двух побед)</td></tr>
+                    <tr><td>Dragonhide, Beast, Emerald</td><td>FT6 (до шести побед)</td></tr>
+                    <tr><td>Остальные киты</td><td>FT4 (до четырёх побед)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 04: Правила проведения тестов -->
+    <div class="hub-detail" id="hubRules">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubRules')">← Ко всем разделам</button>
+
+        <div class="rules-block">
+            <div class="rules-block-title">Правила проведения тестов</div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">1</span>
+                <div>
+                    <div class="rule-num-title">Не затягивайте процесс</div>
+                    <div class="rule-num-text">Запрещено чрезмерно убегать, прятаться от оппонента, строить столбы в начале игры.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">2</span>
+                <div>
+                    <div class="rule-num-title">Не выходите из игры</div>
+                    <div class="rule-num-text">Если в этом нет необходимости — возвращайтесь как можно быстрее, если вас крашнуло. Полный выход на 10+ минут во время теста считается автоматическим проигрышем, если вы не предупредили соперника о возможном уходе.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">3</span>
+                <div>
+                    <div class="rule-num-title">Не атакуйте раньше времени</div>
+                    <div class="rule-num-text">Запрещено преднамеренно атаковать противника, если он ещё не начал действовать — надевает броню, ест, баффается.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">4</span>
+                <div>
+                    <div class="rule-num-title">Не отвлекайте тестера</div>
+                    <div class="rule-num-text">Запрещено отвлекать тестера во время чужого теста — ожидайте свою очередь.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">5</span>
+                <div>
+                    <div class="rule-num-title">Уважайте друг друга</div>
+                    <div class="rule-num-text">Запрещена ярая токсичность. Имейте уважение к оппоненту и тестеру.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">6</span>
+                <div>
+                    <div class="rule-num-title">Не передавайте аккаунт</div>
+                    <div class="rule-num-text">Запрещена передача верифицированного аккаунта кому-либо.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">7</span>
+                <div>
+                    <div class="rule-num-title">Следуйте указаниям тестера</div>
+                    <div class="rule-num-text">Если тестер проверяет вас и просит нажать на определённые кнопки — вы обязаны следовать его указаниям.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">8</span>
+                <div>
+                    <div class="rule-num-title">Только предметы из кита</div>
+                    <div class="rule-num-text">Запрещено использовать посторонние предметы, которые не относятся к тестируемому киту.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">9</span>
+                <div>
+                    <div class="rule-num-title">Никакого вмешательства со стороны</div>
+                    <div class="rule-num-text">Запрещено любое вмешательство посторонних людей в игровой процесс — присутствие игроков на арене, подсказки в чате.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">10</span>
+                <div>
+                    <div class="rule-num-title">Решение администрации</div>
+                    <div class="rule-num-text">В случаях, не предусмотренных правилами, могут применяться меры на усмотрение администрации.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">11</span>
+                <div>
+                    <div class="rule-num-title">Никаких читов</div>
+                    <div class="rule-num-text">Запрещено использовать модификации и команды, дающие преимущество в бою.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">12</span>
+                <div>
+                    <div class="rule-num-title">Один аккаунт в тирлисте</div>
+                    <div class="rule-num-text">Запрещено иметь более одного протестированного аккаунта в тирлисте (возможны исключения).</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">13</span>
+                <div>
+                    <div class="rule-num-title">Кулдаун на пересдачу</div>
+                    <div class="rule-num-text">Тестироваться на одном и том же ките можно только раз в 7 дней — за исключением случая, когда вы повысились до LT3 и хотите сразу продолжить путь дальше.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">14</span>
+                <div>
+                    <div class="rule-num-title">Запрещён холд</div>
+                    <div class="rule-num-text">Использование зажима во время теста запрещено.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">15</span>
+                <div>
+                    <div class="rule-num-title">Ранговые бои между игроками</div>
+                    <div class="rule-num-text">Игроки могут сразиться друг с другом за ранг по обоюдному согласию, но такой матч обязательно должен проходить в присутствии тестера.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">16</span>
+                <div>
+                    <div class="rule-num-title">Пересмотр результата администрацией</div>
+                    <div class="rule-num-text">Администрация вправе аннулировать или изменить результат теста, если сочтёт, что игрок объективно не соответствует полученному рангу или тестирование было проведено некорректно.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">17</span>
+                <div>
+                    <div class="rule-num-title">Языковое ограничение</div>
+                    <div class="rule-num-text">Тестирование доступно только русскоговорящим игрокам из стран СНГ.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-accent-box">
+            <strong>Санкции за нарушение:</strong> временный бан → перепроверка рангов → аннулирование рангов → перманентный бан при повторных нарушениях.
+        </div>
+    </div>
+
+    <!-- 05: Тестеры (бывший testersSubTab) -->
+    <div class="hub-detail" id="hubTesters">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubTesters')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Тестеры</div>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 20px;">
+                Тестеры — это опытные игроки, которые проводят проверку навыков и помогают определить ваш уровень мастерства на платформе.
+            </p>
+            <div class="testers-grid">
+                <div class="tester-card" onclick="openProfileByName('-999-')">
+                    <div class="tester-name">-999-</div>
+                    <div class="tester-status">Старший Тестер</div>
+                </div>
+                <div class="tester-card" onclick="openProfileByName('zor1kkqwix')">
+                    <div class="tester-name">zor1kkqwix</div>
+                    <div class="tester-status">Квалификационный Тестер</div>
+                </div>
+                <div class="tester-card" onclick="openProfileByName('_Xx_deras_xX')">
+                    <div class="tester-name">_Xx_deras_xX</div>
+                    <div class="tester-status">Старший Тестер</div>
+                </div>
+                <div class="tester-card" onclick="openProfileByName('-BaCk-')">
+                    <div class="tester-name">-BaCk-</div>
+                    <div class="tester-status">Квалификационный Тестер</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     ВКЛАДКА "ДРУГАЯ ИНФОРМАЦИЯ" — 4 карточки-обложки
+     ============================================================ -->
+<div class="tab-content" id="otherInfoTab" style="display: none;">
+        <h2 class="section-title" id="otherInfoHubTitle">Другая информация</h2>
+    <p class="hub-intro" id="otherInfoHubIntro">Выберите раздел, чтобы узнать подробности.</p>
+
+    <div class="hub-grid" id="otherInfoHubGrid">
+        <div class="hub-card" data-target="hubPoints">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">01</div>
+            <div class="hub-card-heading"><span>РАСПРЕДЕЛЕНИЕ<br>ОЧКОВ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Распределение очков</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubRetired">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">02</div>
+            <div class="hub-card-heading"><span>СИСТЕМА<br>RETIRED</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Система Retired</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubModes">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">03</div>
+            <div class="hub-card-heading"><span>ТЕСТИРУЕМЫЕ<br>РЕЖИМЫ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Тестируемые режимы</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubHall">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">04</div>
+            <div class="hub-card-heading"><span>ДОСКА<br>ПОЧЕТА</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Доска почета</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 01: Распределение очков (бывший ptsSubTab) -->
+    <div class="hub-detail" id="hubPoints">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubPoints')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Распределение очков PTS</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 15px;">
+                Рейтинг игрока формируется путём суммирования очков PTS, полученных только за основные (main) киты. Очки, набранные за дополнительные (sub) киты, в общий рейтинг не учитываются.
+            </p>
+            <table class="faq-table">
+                <thead><tr><th>Тир</th><th>PTS</th></tr></thead>
+                <tbody id="faqTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 02: Система Retired -->
+    <div class="hub-detail" id="hubRetired">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubRetired')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Статус Retired</div>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
+                Статус Retired предназначен для игроков, которые хотят временно выйти из активной системы тиртестов и PvP-соревнований. Это позволяет избежать штрафных очков и понижений в периоды неактивности.
+            </p>
+            <div class="info-accent-box">
+                Начиная с ранга <strong>HT3</strong>, любой игрок имеет право добровольно уйти в Retired. Игроки с более низкими рангами не могут получить этот статус, так как они ещё находятся на этапе квалификации.
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Основания для получения статуса</div>
+            <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
+                <li><strong style="color: var(--text-main);">Добровольное желание игрока.</strong> Игрок может в любой момент подать заявку на уход в Retired через администрацию или соответствующую систему.</li>
+                <li><strong style="color: var(--text-main);">Автоматически.</strong> Если игрок не проходил тиртест по конкретному киту более двух месяцев, система автоматически присваивает ему статус Retired по этому киту — чтобы неактивные игроки не занимали места в топе и не создавали иллюзию активности.</li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Обозначение и влияние на рейтинг</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.7; margin-bottom: 10px;">
+                При уходе в Retired по конкретному киту к его названию добавляется буква <strong style="color:#ff4747;">R</strong>, например <strong style="color:#ff4747;">R</strong>HT1 — это позволяет сразу видеть, что игрок временно неактивен.
+            </p>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                Игроки со статусом Retired исключаются из общего топа, чтобы в рейтинге отображались только активные игроки, которые действительно участвуют в PvP и тиртестах.
+            </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Возврат в активный режим</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                Чтобы снова стать активным, игроку достаточно пройти тиртест по соответствующему киту. Как только тиртест успешно завершён, статус Retired снимается, и игрок снова отображается в топе и может участвовать в PvP на общих основаниях.
+            </p>
+            <div class="info-accent-box" style="margin-top: 15px;">
+                Статус Retired применяется <strong>индивидуально к каждому киту</strong>. Игрок может быть активным на одном ките и находиться в Retired на другом — например, иметь ранг HT1 на Hardcore и одновременно статус RHT1 на Emerald Pot, если давно не играл на нём.
+            </div>
+        </div>
+    </div>
+
+    <!-- 03: Тестируемые режимы (бывший wikiTab) -->
+    <div class="hub-detail" id="hubModes">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubModes')">← Ко всем разделам</button>
+        <h2 class="section-title">Тестируемые режимы</h2>
+
+        <div class="wiki-grid">
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/hardcore.png" alt="">
+                <h3>Hardcore</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Изумрудный Меч</strong> — Отдача I, Резкость II<br>
+                <strong>Золотые яблоки</strong> — Регенерация II на 5 секунд
+            </div>
+            <p>Универсальный набор, максимально приближённый к ванильному геймплею. Полный хардкор без послаблений</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">Clutch</span><span class="skill-tag">Movement</span><span class="skill-tag">Свап предметов</span><span class="skill-tag">Ситуационное мышление и принятие решений в критических условиях</span><span class="skill-tag">Умение работать с разными предметами в бою</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/hardcore_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/manhunt.png" alt="">
+                <h3>Manhunt</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I
+            </div>
+            <p>Широкий арсенал для выживания и преследования. Лава контролирует пространство, слизь спасает от падений, лестницы и блоки дают мобильность, Волшебная Палочка Болотной Ведьмы работает на дистанции</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">CPS</span><span class="skill-tag">Aim</span><span class="skill-tag">Clutch</span><span class="skill-tag">Movement</span><span class="skill-tag">Свап предметов</span><span class="skill-tag">Ситуационное мышление и принятие решений критических условиях</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/manhunt_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/diamond.png" alt="">
+                <h3>Diamond Pot</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Алмазный Меч</strong> — Отдача I
+            </div>
+            <p>Обычное пвп на алмазных сетах. Минимальный набор: лёгкая отдача на мече и регенерация для поддержания боя. Без лишних механик.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">CPS</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/diamond_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/beast.png" alt="">
+                <h3>Beast</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Алмазный Меч</strong> — без зачарований
+            </div>
+            <p>Обычное пвп в железной кольчужной броне с алмазным мечом. Популярный стартовый кит на анархических серверах. Ничего лишнего.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Базовое PvP</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/beast_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/emerald.png" alt="">
+                <h3>Emerald</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Изумрудный Меч</strong> — без зачарований
+            </div>
+            <p>Обычное пвп на изумрудных сетах. Ничего лишнего. Чистая классика без механик, без отдачи и эффектов. Только ты, твой оппонент и равные условия</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Базовое PvP</span><span class="skill-tag">Понимание таймингов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/emerald_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/emerald_pot.png" alt="">
+                <h3>Emerald Pot</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I
+            </div>
+            <p>Агрессивный спам-кит. Зелья льются рекой, морковь восстанавливает голод — остановиться почти невозможно. Без пауз, без передышек. Только постоянное давление и контроль каждой секунды боя.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Концентрацию</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/emerald_pot_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/rvm.png" alt="">
+                <h3>RVM</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I<br>
+                <strong>Волшебная Палочка Болотной Ведьмы</strong> — Отдача V
+            </div>
+            <p>Мобильный кит. Меч для ближнего боя, палочка для дальнего. Оба оружия отталкивают высоко в воздух. Тыква и слизь предназначены для клатчей.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Clutch</span><span class="skill-tag">Понимание дистанции между противниками</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/rvm_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/dragonhide.png" alt="">
+                <h3>Dragonhide</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — без зачарований
+            </div>
+            <p>Классическое пвп на драконьих мечах. Никаких дополнительных механик, никаких эффектов и уловок. Только чистая рубка и контроль каждого удара.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Базовое PvP</span><span class="skill-tag">CPS</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/dragonhide_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/pickaxe.png" alt="">
+                <h3>Pickaxe</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — без зачарований<br>
+                <strong>Ледокованная Драконья Стальная Кирка</strong> — без зачарований
+            </div>
+            <p>Обычное пвп с нестандартным набором. Кирка даёт мощный, но редкий удар. Щит с Крестом — блокирует каждый третий удар, который вы получили</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Базовое PvP</span><span class="skill-tag">Свап предметов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/pickaxe_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/smp.png" alt="">
+                <h3>SMP</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I, Резкость II<br>
+                <strong>Драконий Меч</strong> — Резкость II
+            </div>
+            <p>Тактический кит. Ледокованая Дракония Стальная Кирка — для ломки булыжника или первого удара, чтобы снести большую часть хп противнику, дальше добивать мечом. Слизь для клатчей, Ледокованые Драконий Стальные Ботинки для быстрого бега.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">CPS</span><span class="skill-tag">Aim</span><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Понимание ситуации</span><span class="skill-tag">Свап предметов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/smp_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/vanilla.png" alt="">
+                <h3>Vanilla</h3>
+            </div>
+            <div class="wiki-card-body">
+<p>Универсальный набор, где игроки не получают готовую экипировку, а собирают собственный кит с нуля, самостоятельно выбирая любые доступные ресурсы, оружие, броню, зелья и блоки для PvP. Благодаря этому каждый бой проходит с уникальной сборкой, а сам процесс учит грамотно планировать инвентарь ещё до старта схватки, что делает тренировки максимально приближенными к реальным игровым ситуациям.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Свап предметов</span><span class="skill-tag">Контроль здоровья</span><span class="skill-tag">Базовое PvP</span><span class="skill-tag">Концентрацию</span><span class="skill-tag">Понимание таймингов</span><span class="skill-tag">Ситуационное мышление и принятие решений в критических условиях</span><span class="skill-tag">Умение работать с разными предметами в бою</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/vanilla_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/combo.png" alt="">
+                <h3>Combo</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I (При ударе даёт замедление на 2 сек)<br>
+                <strong>Зачарованные Золотые Яблоки</strong> — Регенерация II на 60 сек
+            </div>
+            <p>Бой идёт либо до вскрытия панциря оппонента, либо до фатальной ошибки с падением. Каждый удар замедляет</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Концентрацию</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/combo_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/gapple.png" alt="">
+                <h3>Gapple</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Драконий Меч</strong> — Отдача I<br>
+                <strong>Золотые Яблоки</strong> — Регенерация II на 5 секунд
+            </div>
+            <p>Кит, который заставляет следить за каждой единицей здоровья. Яблоки дают кратковременное преимущество, но не спасают от грубых ошибок</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">CPS</span><span class="skill-tag">Контроль здоровья</span><span class="skill-tag">Свап предметов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/gapple_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/mace.png" alt="">
+                <h3>Mace</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Изумрудный Меч</strong> — Резкость II, Отдача I<br>
+                <strong>Булава</strong> — Плотность V, Порыв ветра III<br>
+                <strong>Ножницы</strong> — Эффективность V
+            </div>
+            <p>Кит построен вокруг контроля падений. Булава отбрасывает противника высоко в воздух. Ножницы мгновенно ломают стога сена, лишая оппонента безопасного приземления.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Aim</span><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Свап предметов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/mace_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+
+        <div class="wiki-card">
+            <div class="wiki-title-wrapper">
+                <img class="wiki-title-icon" src="assets/logos/crystal.png" alt="">
+                <h3>Crystal</h3>
+            </div>
+            <div class="wiki-card-body">
+<div class="wiki-stats">
+                <strong>Булава</strong> — Пробитие V<br>
+                <strong>Рубиновый Меч</strong> — Резкость V, Отдача II, Мародерство III
+            </div>
+            <p>Молния бьёт в ближайшего игрока, стоящего к кристаллу. Неважно, кто его поставил — установщик тоже может получить удар, если окажется ближе всех.</p>
+            <div class="wiki-trains">
+                <span class="wiki-trains-label">Тренирует</span>
+                <div class="skill-tags"><span class="skill-tag">Movement</span><span class="skill-tag">Clutch</span><span class="skill-tag">Свап предметов</span></div>
+            </div>
+</div>
+<div class="inv-preview-box">
+                <img src="assets/wiki/crystal_inv.png" onerror="this.style.display='none';">
+            </div>
+</div>
+        </div>
+    </div>
+
+    <!-- 04: Доска почета (бывший hallTab) -->
+    <div class="hub-detail" id="hubHall">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubHall')">← Ко всем разделам</button>
+        <h2 class="section-title">Доска почета</h2>
+        <p class="hub-intro">Люди, которые создали и развивают платформу MultiCraftCISTiers.</p>
+
+        <div class="honor-grid">
+            <div class="honor-card" onclick="openProfileByName('-999-')">
+                <div class="honor-name">-999-</div>
+                <div class="honor-role">Создатель · Владелец сервера · Со-автор системы MultiCraftCISTiers</div>
+            </div>
+
+            <div class="honor-card" onclick="openProfileByName('zor1kkqwix')">
+                <div class="honor-name">zor1kkqwix</div>
+                <div class="honor-role">Главный Администратор · Создатель и технический разработчик системы MultiCraftCISTiers</div>
+            </div>
+
+            <div class="honor-card" onclick="openProfileByName('AMORE')">
+                <div class="honor-name">AMORE</div>
+                <div class="honor-role">Администратор · Главный строитель сервера</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+function loadPlayersScript(url, callback) {
+    const script = document.createElement('script');
+    const cacheBuster = '?v=' + new Date().getTime();
+    script.src = url + cacheBuster;
+    script.onload = () => callback(true);
+    script.onerror = () => callback(false);
+    document.head.appendChild(script);
+}
+window.addEventListener('DOMContentLoaded', () => {
+    loadPlayersScript('players/players.js', (success) => {
+        if (success && typeof players !== 'undefined') {
+            if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
+        } else {
+            loadPlayersScript('players.js', (successRoot) => {
+                if (successRoot && typeof players !== 'undefined') {
+                    if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
+                }
+            });
+        }
+    });
+});
+</script>
+<script src="js/main.js"></script>
+</body>
+</html>
