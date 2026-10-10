@@ -77,7 +77,8 @@
 
 <div class="sidebar" id="sidebar">
     <h3>Навигация</h3>
-    <a href="#" onclick="switchTab('mainPage')">Главная</a>
+    <a href="#" onclick="switchTab('homePage')">Главная</a>
+    <a href="#" onclick="openLeaderboard('all')">Лидерборд</a>
     <a href="#" onclick="switchTab('duelsTab')">Дуэли</a>
     <a href="#" onclick="switchTab('testingTab')">Тестирование</a>
     <a href="#" onclick="switchTab('otherInfoTab')">Другая информация</a>
@@ -92,11 +93,53 @@
 <header class="header">
     <div class="logo">MultiCraftCISTiers</div>
     <div class="header-right">
-        <button class="menu-btn" id="menuBtn">Меню</button>
+        <button class="menu-btn" id="menuBtn" type="button" aria-label="Меню">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </button>
     </div>
 </header>
 
-<div class="main-page" id="mainPage" style="display: block;">
+<!-- ============================================================
+     НОВАЯ ГЛАВНАЯ (открывается при входе). Данные подставляет renderHome() в main.js
+     ============================================================ -->
+<div class="tab-content home-page" id="homePage" style="display: block;">
+    <section class="home-hero">
+        <h1 class="home-hero-text">Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков</h1>
+        <button type="button" class="home-cta" onclick="openLeaderboard('all')">Лидерборд</button>
+        <div class="home-stats">
+            <div class="home-stat"><b id="homeStatDuels">—</b><span>Поединков</span></div>
+            <div class="home-stat"><b id="homeStatPlayers">—</b><span>Игроков</span></div>
+            <div class="home-stat"><b id="homeStatKits">—</b><span>Китов</span></div>
+        </div>
+    </section>
+
+    <section class="home-section">
+        <h2 class="home-section-title">Режимы</h2>
+        <div class="home-modes" id="homeModes"></div>
+    </section>
+
+    <section class="home-section">
+        <div class="home-panel">
+            <div class="home-panel-head">
+                <h2>Топ-5 Overall</h2>
+                <a href="#mainPage" onclick="openLeaderboard('all'); return false;">Весь рейтинг ›</a>
+            </div>
+            <div id="homeTop5"></div>
+        </div>
+    </section>
+
+    <section class="home-section">
+        <div class="home-panel">
+            <div class="home-panel-head">
+                <h2>Недавние поединки</h2>
+                <a href="#duelsTab" onclick="switchTab('duelsTab'); return false;">Все дуэли ›</a>
+            </div>
+            <div class="duels-list home-duels" id="homeDuels"></div>
+        </div>
+    </section>
+</div>
+
+<div class="main-page" id="mainPage" style="display: none;">
     <div class="hero">
         <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Прогрессируйте, сдавайте тесты квалифицированным тестерам и занимайте топовые позиции.</p>
 
@@ -113,7 +156,7 @@
                     <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
                 <div class="custom-select-panel" id="kitFilterPanel">
-                    <div class="custom-select-group-label custom-select-option selected" data-value="all">Main Kits</div>
+                    <div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">Main Kits</div>
                     <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
                     <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
                     <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
@@ -125,7 +168,7 @@
                     <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
                     <div class="custom-select-option" data-value="SMP">SMP</div>
                     <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
-                    <div class="custom-select-group-label custom-select-option" data-value="sub-all">Sub Kits</div>
+                    <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
                     <div class="custom-select-option" data-value="Combo">Combo</div>
                     <div class="custom-select-option" data-value="Gapple">Gapple</div>
                     <div class="custom-select-option" data-value="Mace">Mace</div>
@@ -185,7 +228,7 @@
             </button>
             <div class="custom-select-panel" id="duelsKitFilterPanel">
                 <div class="custom-select-option selected" data-value="all">Все киты</div>
-                <div class="custom-select-group-label" data-value="main-label">Main Kits</div>
+                <div class="custom-select-option custom-select-option-group" data-value="main-all" style="font-weight:700;">Main Kits</div>
                 <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
                 <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
                 <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
@@ -197,13 +240,24 @@
                 <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
                 <div class="custom-select-option" data-value="SMP">SMP</div>
                 <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
-                <div class="custom-select-group-label" data-value="sub-label">Sub Kits</div>
+                <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
                 <div class="custom-select-option" data-value="Combo">Combo</div>
                 <div class="custom-select-option" data-value="Gapple">Gapple</div>
                 <div class="custom-select-option" data-value="Mace">Mace</div>
                 <div class="custom-select-option" data-value="Crystal">Crystal</div>
             </div>
         </div>
+    </div>
+
+    <div class="filters-row-3" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px;">
+        <label class="checkbox-label">
+            <input type="checkbox" id="duelsQualToggle">
+            Квалификации
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="duelsHighToggle">
+            Высокие Результаты
+        </label>
     </div>
 
     <div class="duels-list duels-list-global" id="globalDuelsList"></div>
@@ -370,7 +424,7 @@
                 <li><strong>Тестируемый</strong> тоже получает очки за проваленный тиртест — по той же шкале в зависимости от счёта поражения.</li>
             </ul>
 
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;"><strong style="color: var(--text-main);">Стандартные киты (FT4)</strong></p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;"><strong style="color: var(--text-main);">Стандартные киты и SMP (FT4)</strong></p>
             <table class="faq-table">
                 <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
                 <tbody>
@@ -381,7 +435,7 @@
                 </tbody>
             </table>
 
-            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Combo, SMP, Gapple (FT2)</strong></p>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Combo, Gapple (FT2)</strong></p>
             <table class="faq-table">
                 <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
                 <tbody>
@@ -406,23 +460,8 @@
             <div class="info-accent-box" style="margin-top: 15px;">
                 При накоплении <strong>2 очков</strong> игрок понижается в ранге на одну ступень, а очки сбрасываются до нуля.<br>
                 Все штрафные очки полностью обнуляются <strong>раз в месяц</strong> — независимо от того, сколько их накопилось.<br>
-                Количество очков отображается в профиле игрока и в топе по конкретным китам.
+                Количество очков отображается только в топе, отфильтрованном по конкретному киту — на общем профиле игрока штрафные очки не показываются.
             </div>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Форматы дуэлей по китам</div>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px;">
-                Формат матча (количество побед, до которого идёт игра) зависит от кита:
-            </p>
-            <table class="faq-table">
-                <thead><tr><th>Киты</th><th>Формат</th></tr></thead>
-                <tbody>
-                    <tr><td>Combo, SMP, Gapple</td><td>FT2 (до двух побед)</td></tr>
-                    <tr><td>Dragonhide, Beast, Emerald</td><td>FT6 (до шести побед)</td></tr>
-                    <tr><td>Остальные киты</td><td>FT4 (до четырёх побед)</td></tr>
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -501,7 +540,7 @@
                 <span class="rule-num">9</span>
                 <div>
                     <div class="rule-num-title">Никакого вмешательства со стороны</div>
-                    <div class="rule-num-text">Запрещено любое вмешательство посторонних людей в игровой процесс — присутствие игроков на арене, подсказки в чате.</div>
+                    <div class="rule-num-text">Если кто-либо помешает игровому процессу на арене или подскажет в чате, матч подлежит переигровке. Возможны исключения по решению администрации.</div>
                 </div>
             </div>
 
@@ -540,8 +579,8 @@
             <div class="rule-num-row">
                 <span class="rule-num">14</span>
                 <div>
-                    <div class="rule-num-title">Запрещён холд</div>
-                    <div class="rule-num-text">Использование зажима во время теста запрещено.</div>
+                    <div class="rule-num-title">Запрещён зажим</div>
+                    <div class="rule-num-text">Использование холда во время теста запрещено.</div>
                 </div>
             </div>
 
@@ -568,6 +607,14 @@
                     <div class="rule-num-text">Тестирование доступно только русскоговорящим игрокам из стран СНГ.</div>
                 </div>
             </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">18</span>
+                <div>
+                    <div class="rule-num-title">Не избегайте урона от падения</div>
+                    <div class="rule-num-text">Запрещено уклоняться от урона от падения выходом из игры или приземлением на крышу арены, когда вас подбросили вверх.</div>
+                </div>
+            </div>
         </div>
 
         <div class="info-accent-box">
@@ -588,12 +635,8 @@
                     <div class="tester-name">-999-</div>
                     <div class="tester-status">Старший Тестер</div>
                 </div>
-                <div class="tester-card" onclick="openProfileByName('zor1kkqwix')">
-                    <div class="tester-name">zor1kkqwix</div>
-                    <div class="tester-status">Квалификационный Тестер</div>
-                </div>
-                <div class="tester-card" onclick="openProfileByName('_Xx_deras_xX')">
-                    <div class="tester-name">_Xx_deras_xX</div>
+                <div class="tester-card" onclick="openProfileByName('DzIla_EDITSmob')">
+                    <div class="tester-name">DzIla_EDITSmob</div>
                     <div class="tester-status">Старший Тестер</div>
                 </div>
                 <div class="tester-card" onclick="openProfileByName('-BaCk-')">
@@ -649,6 +692,16 @@
             <div class="hub-card-heading"><span>ДОСКА<br>ПОЧЕТА</span></div>
             <div class="hub-card-footer">
                 <span class="hub-card-title">Доска почета</span>
+                <span class="hub-card-link">Читать →</span>
+            </div>
+        </div>
+
+        <div class="hub-card" data-target="hubAvgTier">
+            <div class="hub-card-bg"></div>
+            <div class="hub-card-num">05</div>
+            <div class="hub-card-heading"><span>СРЕДНИЙ<br>ОБЩИЙ РАНГ</span></div>
+            <div class="hub-card-footer">
+                <span class="hub-card-title">Средний общий ранг</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
@@ -1046,6 +1099,28 @@
                 <div class="honor-name">AMORE</div>
                 <div class="honor-role">Администратор · Главный строитель сервера</div>
             </div>
+        </div>
+    </div>
+
+    <!-- 05: Средний общий ранг -->
+    <div class="hub-detail" id="hubAvgTier">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubAvgTier')">← Ко всем разделам</button>
+        <div class="info-section">
+            <div class="info-section-title">Что такое средний общий ранг</div>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
+                Средний общий ранг показывает общий уровень игрока по всем китам сразу — и основным (main), и дополнительным (sub). Он считается автоматически как усреднённое значение всех ваших тиров, поэтому обновляется каждый раз, когда меняется хотя бы один из них.
+            </p>
+            <div class="info-accent-box">
+                Пересчёт происходит без вашего участия — сдавать отдельный тест на средний ранг не нужно, он всегда отражает актуальное состояние вашего профиля.
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Где он используется</div>
+            <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
+                <li><strong style="color: var(--text-main);">Тег на сервере.</strong> Средний общий ранг отображается в вашем тег на игровом сервере, показывая остальным ваш примерный уровень с первого взгляда.</li>
+                <li><strong style="color: var(--text-main);">Карточка профиля на сайте.</strong> Это же значение видно в вашей карточке в общем рейтинге — так проще сравнивать общий уровень игроков, а не только результаты по отдельным китам.</li>
+            </ul>
         </div>
     </div>
 </div>
