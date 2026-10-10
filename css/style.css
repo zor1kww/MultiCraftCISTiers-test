@@ -62,7 +62,8 @@ body, html {
 .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 14px;
     padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-solid);
@@ -107,10 +108,17 @@ body, html {
     background: var(--sidebar-item);
     border: 1px solid rgba(255,204,71,.3);
     color: var(--accent);
-    padding: 10px 14px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 10px;
     cursor: pointer;
 }
+
+.menu-btn svg { pointer-events: none; display: block; }
 
 .menu-btn:hover {
     box-shadow: 0 0 15px rgba(255,204,71,.4);
@@ -375,6 +383,7 @@ body, html {
 }
 
 .custom-select-group-label {
+    padding: 10px 12px 4px;
     font-weight: 700;
     color: var(--accent);
     text-transform: uppercase;
@@ -382,10 +391,14 @@ body, html {
     letter-spacing: 0.05em;
     margin-top: 4px;
     border-top: 1px solid var(--border-color);
+    cursor: default;
+    user-select: none;
+    pointer-events: none;
 }
 
 .custom-select-group-label:first-child {
     margin-top: 0;
+    padding-top: 10px;
     border-top: none;
 }
 
@@ -446,111 +459,40 @@ body, html {
 
 /* ==========================================================================
    СТРУКТУРА КАРТОЧКИ ИГРОКА (.player-card-row)
-   Обновлённый вид: портрет игрока слева (голова+плечи), градиентный фон
-   по месту в рейтинге, имя/очки/тир справа сверху, ряд китов снизу.
    ========================================================================== */
 .player-card-row {
-    padding: 16px;
+    padding: 14px 16px;
     display: flex;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: center;
+    gap: 20px;
     cursor: pointer;
     width: 100%;
-    position: relative;
-    overflow: hidden;
-}
-
-/* Градиентная подложка карточки - цвет зависит от места в рейтинге.
-   Наносится отдельным слоем позади контента, чтобы не мешать тексту. */
-.player-card-row::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: linear-gradient(120deg, rgba(255,255,255,0.03), transparent 60%);
-    pointer-events: none;
-}
-
-.top-rank-1 .player-card-row::before {
-    background: linear-gradient(120deg, rgba(218, 165, 32, 0.22), transparent 65%);
-}
-.top-rank-2 .player-card-row::before {
-    background: linear-gradient(120deg, rgba(192, 192, 192, 0.20), transparent 65%);
-}
-.top-rank-3 .player-card-row::before {
-    background: linear-gradient(120deg, rgba(160, 82, 45, 0.20), transparent 65%);
-}
-.top-rank-4 .player-card-row::before {
-    background: linear-gradient(120deg, rgba(128, 128, 128, 0.14), transparent 65%);
-}
-.top-rank-5 .player-card-row::before {
-    background: linear-gradient(120deg, rgba(0, 128, 128, 0.14), transparent 65%);
-}
-
-/* Портрет игрока - квадратная рамка, показывает только голову и плечи
-   скина (обрезка через object-position), не скин целиком в полный рост */
-.player-portrait {
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0;
-    width: 72px;
-    height: 72px;
-    border-radius: 12px;
-    overflow: hidden;
-    background: rgba(0,0,0,0.25);
-    border: 1px solid var(--border-color);
-}
-
-.player-portrait img {
-    width: 100%;
-    height: 260%;
-    object-fit: cover;
-    object-position: top center;
-    display: block;
-}
-
-.top-rank-1 .player-portrait { border-color: rgba(218, 165, 32, 0.6); }
-.top-rank-2 .player-portrait { border-color: rgba(192, 192, 192, 0.6); }
-.top-rank-3 .player-portrait { border-color: rgba(160, 82, 45, 0.6); }
-
-.player-info-column {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.player-info-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
 }
 
 .player-name-block {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
-    min-width: 0;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+    min-width: 180px;
 }
 
 .player-rank {
     color: var(--accent);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: bold;
-    flex-shrink: 0;
 }
 
 .player-name {
     color: var(--text-main);
-    font-size: 17px;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 16px;
+}
+
+.player-center-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
 }
 
 .player-meta-box {
@@ -659,15 +601,16 @@ body, html {
     text-align: center;
 }
 
-/* Блок PTS / Тир — теперь встроен в верхнюю строку карточки, справа от имени */
+/* Блок PTS / Тир (Всегда прижат в самый правый край) */
 .player-right {
+    margin-left: auto;
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 15px;
+    justify-content: flex-end;
+    font-size: 16px;
     font-weight: bold;
-    white-space: nowrap;
+    min-width: 90px;
 }
 
 .tier-badge {
@@ -677,6 +620,82 @@ body, html {
     display: inline-block;
     text-align: center;
     min-width: 55px;
+}
+
+/* ==========================================================================
+   ТОП ПО КОНКРЕТНОМУ КИТУ — карточка со скином игрока (bust-портрет)
+   Пока используется один дефолтный скин для всех - индивидуальные скины
+   планируются позже отдельной системой загрузки/модерации.
+   ========================================================================== */
+.player-card-row-bust {
+    padding: 0;
+    align-items: stretch;
+    gap: 16px;
+}
+
+.bust-card-skin {
+    width: 84px;
+    min-height: 84px;
+    align-self: stretch;
+    object-fit: cover;
+    object-position: center top;
+    flex-shrink: 0;
+    display: block;
+    border-radius: 14px 0 0 14px;
+    /* Скин рисуется впритык к левому краю и растягивается на всю высоту
+       карточки (align-self: stretch), повторяя компоновку с референса -
+       портрет как часть рамки, а не элемент с отступами внутри неё.
+       border-radius дублирует скругление .player-container на случай,
+       если overflow:hidden не сработает в каком-то браузере. */
+}
+
+.bust-card-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 16px 14px 0;
+    min-width: 0; /* чтобы длинные ники корректно переносились/обрезались */
+    flex-grow: 1;
+}
+
+.bust-card-top {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.bust-card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bust-penalty-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: rgba(255, 107, 53, 0.15);
+    border: 1px solid rgba(255, 107, 53, 0.35);
+    color: #ff6b35;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+    .bust-card-skin {
+        width: 68px;
+        min-height: 68px;
+    }
+    .bust-card-info {
+        padding: 10px 12px 10px 0;
+        gap: 6px;
+    }
 }
 
 /* ==========================================================================
@@ -1657,34 +1676,29 @@ body, html {
     .filters, .filters-row-2 { grid-template-columns: 1fr; gap: 8px; }
     
     .player-card-row {
-        padding: 12px;
+        flex-direction: column;
+        align-items: stretch;
         gap: 12px;
+        padding: 14px;
     }
-
-    .player-portrait {
-        width: 56px;
-        height: 56px;
+    
+    .player-name-block {
+        justify-content: space-between;
+        width: 100%;
+        min-width: 0;
     }
-
-    .player-name {
-        font-size: 15px;
+    
+    .player-center-block {
+        width: 100%;
     }
-
+    
     .player-right {
-        font-size: 13px;
-    }
-
-    .player-tiers-row {
-        gap: 6px;
-    }
-
-    .tier-item-box {
-        width: 34px;
-    }
-
-    .tier-icon-circle {
-        width: 26px;
-        height: 26px;
+        margin-left: 0;
+        text-align: right;
+        width: 100%;
+        border-top: 1px solid var(--border-color);
+        padding-top: 10px;
+        justify-content: flex-start;
     }
     
     .modal-grid {
@@ -1715,4 +1729,184 @@ body, html {
         transition-duration: 0.001ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+
+/* ==========================================================================
+   НОВАЯ ГЛАВНАЯ СТРАНИЦА (#homePage)
+   ========================================================================== */
+.home-page { overflow-x: hidden; }
+
+.home-hero {
+    text-align: center;
+    padding: 38px 16px 30px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(255,204,71,.12), transparent 62%), var(--card-bg);
+}
+
+.home-hero-text {
+    font-size: clamp(20px, 5.4vw, 30px);
+    line-height: 1.4;
+    font-weight: normal;
+    color: var(--text-main);
+    max-width: 760px;
+    margin: 0 auto 26px;
+}
+
+.home-cta {
+    display: inline-block;
+    padding: 16px 46px;
+    border: none;
+    border-radius: 999px;
+    background: var(--text-main);
+    color: var(--bg-solid);
+    font-size: 18px;
+    cursor: pointer;
+    transition: box-shadow .2s ease, transform .15s ease;
+}
+
+.home-cta:hover {
+    box-shadow: 0 0 18px rgba(255,204,71,.45);
+    transform: translateY(-1px);
+}
+
+.home-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    max-width: 640px;
+    margin: 32px auto 0;
+}
+
+.home-stat b {
+    display: block;
+    font-weight: normal;
+    font-size: clamp(22px, 6.4vw, 34px);
+    color: var(--text-main);
+}
+
+.home-stat span {
+    display: block;
+    margin-top: 6px;
+    font-size: clamp(11px, 3.3vw, 14px);
+    color: var(--text-muted);
+}
+
+.home-section { margin-top: 30px; }
+
+.home-section-title {
+    text-align: center;
+    font-weight: normal;
+    font-size: clamp(26px, 7.5vw, 38px);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-main);
+    margin: 0 0 16px;
+}
+
+/* Горизонтальный список режимов: прокручивается только он, а не страница */
+.home-modes {
+    display: flex;
+    gap: 12px;
+    max-width: 100%;
+    padding: 4px 2px 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+    scrollbar-width: thin;
+}
+
+.home-mode-card {
+    flex: 0 0 auto;
+    width: min(240px, 72vw);
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.14);
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    text-decoration: none;
+    transition: transform .15s ease, box-shadow .2s ease;
+}
+
+.home-mode-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2px var(--mode-color), 0 8px 22px rgba(0,0,0,.35);
+}
+
+.home-mode-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.home-mode-icon {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(0,0,0,.22);
+}
+
+.home-mode-icon img { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; }
+
+.home-mode-name { font-size: 18px; line-height: 1.15; min-width: 0; overflow-wrap: anywhere; }
+
+.home-mode-stats { display: flex; flex-direction: column; gap: 4px; font-size: 13px; opacity: .92; }
+
+/* Панели "Топ-5 Overall" и "Недавние поединки" */
+.home-panel {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: var(--card-bg);
+    overflow: hidden;
+}
+
+.home-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.home-panel-head h2 { font-size: 18px; font-weight: normal; color: var(--accent); }
+
+.home-panel-head a { color: var(--text-muted); font-size: 13px; text-decoration: none; white-space: nowrap; }
+.home-panel-head a:hover { color: var(--accent); }
+
+.home-top-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+.home-top-row:last-child { border-bottom: none; }
+.home-top-row:hover { background: var(--card-hover); }
+
+.home-top-place { flex: 0 0 24px; width: 24px; text-align: center; font-size: 20px; color: var(--text-muted); }
+.home-top-place-1 { color: #DAA520; }
+.home-top-place-2 { color: #A9A9A9; }
+.home-top-place-3 { color: #CD7F32; }
+
+.home-top-name { flex: 1; min-width: 0; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.home-top-pts { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.home-top-pts b { font-weight: normal; font-size: 16px; color: var(--text-main); }
+
+.home-duels { padding: 12px; }
+
+@media (max-width: 400px) {
+    .header { padding: 12px 14px; gap: 10px; }
+    .logo { font-size: 18px; }
+    .home-hero { padding: 30px 12px 24px; }
+    .home-cta { padding: 14px 38px; }
 }
