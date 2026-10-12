@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=1.0.4">
+    <link rel="stylesheet" href="css/style.css?v=2.0.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -48,7 +48,6 @@
             <div class="modal-title-box">
                 <h2 id="modalPlayerName">Игрок</h2>
                 <p id="modalPlayerMeta">RU PC</p>
-                <p id="modalPenaltyTotal" class="modal-penalty-total" style="display:none;"></p>
                 <div id="modalRoleContainer"></div>
             </div>
             <button class="close-modal-btn" onclick="closeModal()">✕</button>
@@ -58,12 +57,12 @@
                 <div class="modal-block">
                     <h4>Main Tiers</h4>
                     <div id="modalMainRows"></div>
-                    <div class="modal-block-footer" id="modalMainTotal">Всего за Main: 0 PTS</div>
+                    <div class="modal-block-footer" id="modalMainTotal">Всего Elo за Main: 0</div>
                 </div>
                 <div class="modal-block">
                     <h4>Sub Tiers</h4>
                     <div id="modalSubRows"></div>
-                    <div class="modal-block-footer" id="modalSubTotal">Всего за Sub: 0 PTS</div>
+                    <div class="modal-block-footer" id="modalSubTotal">Всего Elo за Sub: 0</div>
                 </div>
             </div>
 
@@ -77,10 +76,9 @@
 
 <div class="sidebar" id="sidebar">
     <h3>Навигация</h3>
-    <a href="#" onclick="switchTab('homePage')">Главная</a>
-    <a href="#" onclick="openLeaderboard('all')">Лидерборд</a>
+    <a href="#" onclick="switchTab('mainPage')">Главная</a>
     <a href="#" onclick="switchTab('duelsTab')">Дуэли</a>
-    <a href="#" onclick="switchTab('testingTab')">Тестирование</a>
+    <a href="#" onclick="switchTab('testingTab')">Как играть</a>
     <a href="#" onclick="switchTab('otherInfoTab')">Другая информация</a>
     <a href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
     
@@ -93,55 +91,13 @@
 <header class="header">
     <div class="logo">MultiCraftCISTiers</div>
     <div class="header-right">
-        <button class="menu-btn" id="menuBtn" type="button" aria-label="Меню">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M3 5.5h16M3 11h16M3 16.5h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
-        </button>
+        <button class="menu-btn" id="menuBtn">Меню</button>
     </div>
 </header>
 
-<!-- ============================================================
-     НОВАЯ ГЛАВНАЯ (открывается при входе). Данные подставляет renderHome() в main.js
-     ============================================================ -->
-<div class="tab-content home-page" id="homePage" style="display: block;">
-    <section class="home-hero">
-        <h1 class="home-hero-text">Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков</h1>
-        <button type="button" class="home-cta" onclick="openLeaderboard('all')">Лидерборд</button>
-        <div class="home-stats">
-            <div class="home-stat"><b id="homeStatDuels">—</b><span>Поединков</span></div>
-            <div class="home-stat"><b id="homeStatPlayers">—</b><span>Игроков</span></div>
-            <div class="home-stat"><b id="homeStatKits">—</b><span>Китов</span></div>
-        </div>
-    </section>
-
-    <section class="home-section">
-        <h2 class="home-section-title">Режимы</h2>
-        <div class="home-modes" id="homeModes"></div>
-    </section>
-
-    <section class="home-section">
-        <div class="home-panel">
-            <div class="home-panel-head">
-                <h2>Топ-5 Overall</h2>
-                <a href="#mainPage" onclick="openLeaderboard('all'); return false;">Весь рейтинг ›</a>
-            </div>
-            <div id="homeTop5"></div>
-        </div>
-    </section>
-
-    <section class="home-section">
-        <div class="home-panel">
-            <div class="home-panel-head">
-                <h2>Недавние поединки</h2>
-                <a href="#duelsTab" onclick="switchTab('duelsTab'); return false;">Все дуэли ›</a>
-            </div>
-            <div class="duels-list home-duels" id="homeDuels"></div>
-        </div>
-    </section>
-</div>
-
-<div class="main-page" id="mainPage" style="display: none;">
+<div class="main-page" id="mainPage" style="display: block;">
     <div class="hero">
-        <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Прогрессируйте, сдавайте тесты квалифицированным тестерам и занимайте топовые позиции.</p>
+        <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Сражайтесь в ранговых дуэлях, зарабатывайте Elo на каждом ките и занимайте топовые позиции.</p>
 
         <div class="tg-wrapper">
             <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
@@ -199,13 +155,6 @@
             </div>
         </div>
 
-        <div class="filters-row-3">
-            <label class="checkbox-label">
-                <input type="checkbox" id="retiredToggle" checked>
-                Показывать Retired в топе (наравне по PTS)
-            </label>
-        </div>
-
         <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
         <div class="players-list" id="playersList"></div>
     </div>
@@ -216,7 +165,7 @@
      ============================================================ -->
 <div class="tab-content" id="duelsTab" style="display: none;">
     <h2 class="section-title">Дуэли</h2>
-    <p class="hub-intro" id="duelsHubIntro">Все зафиксированные поединки на платформе.</p>
+    <p class="hub-intro" id="duelsHubIntro">Все ранговые дуэли: кто победил и как изменились Elo и ранг у обоих игроков.</p>
 
     <div class="filters">
         <input type="text" id="duelsSearchInput" placeholder="Поиск по игроку или оппоненту...">
@@ -249,228 +198,131 @@
         </div>
     </div>
 
-    <div class="filters-row-3" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px;">
-        <label class="checkbox-label">
-            <input type="checkbox" id="duelsQualToggle">
-            Квалификации
-        </label>
-        <label class="checkbox-label">
-            <input type="checkbox" id="duelsHighToggle">
-            Высокие Результаты
-        </label>
-    </div>
-
     <div class="duels-list duels-list-global" id="globalDuelsList"></div>
 </div>
 
 <!-- ============================================================
-     ВКЛАДКА "ТЕСТИРОВАНИЕ" — 5 карточек-обложек
+     ВКЛАДКА "КАК ИГРАТЬ" — 3 карточки-обложки
      ============================================================ -->
 <div class="tab-content" id="testingTab" style="display: none;">
-        <h2 class="section-title" id="testingHubTitle">Тестирование</h2>
-    <p class="hub-intro" id="testingHubIntro">Выберите раздел, чтобы узнать подробности о прохождении тестов.</p>
+    <h2 class="section-title" id="testingHubTitle">Как играть</h2>
+    <p class="hub-intro" id="testingHubIntro">Выберите раздел, чтобы узнать, как устроены ранговые дуэли и рейтинг Elo.</p>
 
     <div class="hub-grid" id="testingHubGrid">
-        <div class="hub-card" data-target="hubHowToTest">
+        <div class="hub-card" data-target="hubHowToPlay">
             <div class="hub-card-bg"></div>
             <div class="hub-card-num">01</div>
-            <div class="hub-card-heading"><span>КАК ПРОЙТИ<br>ТИРТЕСТ?</span></div>
+            <div class="hub-card-heading"><span>КАК НАЧАТЬ<br>ДУЭЛЬ?</span></div>
             <div class="hub-card-footer">
-                <span class="hub-card-title">Как пройти тиртест?</span>
+                <span class="hub-card-title">Как начать дуэль?</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
 
-        <div class="hub-card" data-target="hubQualTest">
+        <div class="hub-card" data-target="hubEloSystem">
             <div class="hub-card-bg"></div>
             <div class="hub-card-num">02</div>
-            <div class="hub-card-heading"><span>КВАЛИФИКАЦИОННЫЙ<br>ТЕСТ</span></div>
+            <div class="hub-card-heading"><span>КАК СЧИТАЕТСЯ<br>ELO</span></div>
             <div class="hub-card-footer">
-                <span class="hub-card-title">Квалификационный тест</span>
+                <span class="hub-card-title">Как считается Elo</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
 
-        <div class="hub-card" data-target="hubHighTest">
+        <div class="hub-card" data-target="hubDuelRules">
             <div class="hub-card-bg"></div>
             <div class="hub-card-num">03</div>
-            <div class="hub-card-heading"><span>HT3+ ТЕСТЫ</span></div>
+            <div class="hub-card-heading"><span>ПРАВИЛА<br>ДУЭЛЕЙ</span></div>
             <div class="hub-card-footer">
-                <span class="hub-card-title">Высокий HT3+ тест</span>
-                <span class="hub-card-link">Читать →</span>
-            </div>
-        </div>
-
-        <div class="hub-card" data-target="hubRules">
-            <div class="hub-card-bg"></div>
-            <div class="hub-card-num">04</div>
-            <div class="hub-card-heading"><span>ПРАВИЛА<br>ПРОВЕДЕНИЯ<br>ТЕСТОВ</span></div>
-            <div class="hub-card-footer">
-                <span class="hub-card-title">Правила проведения тестов</span>
-                <span class="hub-card-link">Читать →</span>
-            </div>
-        </div>
-
-        <div class="hub-card" data-target="hubTesters">
-            <div class="hub-card-bg"></div>
-            <div class="hub-card-num">05</div>
-            <div class="hub-card-heading"><span>ТЕСТЕРЫ</span></div>
-            <div class="hub-card-footer">
-                <span class="hub-card-title">Тестеры</span>
+                <span class="hub-card-title">Правила дуэлей</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
     </div>
 
-    <!-- 01: Как пройти тиртест -->
-    <div class="hub-detail" id="hubHowToTest">
-        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubHowToTest')">← Ко всем разделам</button>
+    <!-- 01: Как начать дуэль -->
+    <div class="hub-detail" id="hubHowToPlay">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubHowToPlay')">← Ко всем разделам</button>
         <div class="info-section">
-            <div class="info-section-title">Как пройти тиртест?</div>
+            <div class="info-section-title">Как начать дуэль?</div>
 
-            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 15px;"><strong style="color: var(--accent);">Подача заявки</strong><br>
-            Игрок переходит в нашу Telegram-группу, находит раздел с интересующим его китом и отправляет заявку боту, используя предложенный шаблон.<br>
-            Также можно пройти тест напрямую на сервере, договорившись с тиртестером лично, когда он находится в сети.<br>
-            По итогам успешного прохождения ваш результат фиксируется на сайте, а ранг обновляется.</p>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 15px;"><strong style="color: var(--accent);">Вход в дуэли</strong><br>
+            Выберите кит и нажмите на кнопку входа в дуэли — вы будете телепортированы в зону ожидания. В чате появится сообщение о том, что вы зашли в дуэли с выбранным набором.</p>
 
-            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7;"><strong style="color: var(--accent);">Выбор типа теста</strong><br>
-            В зависимости от того, есть ли у вас уже ранг и какой именно, вы можете попасть на один из двух типов тестирования:</p>
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 15px;"><strong style="color: var(--accent);">Поиск соперника</strong><br>
+            Как только в зону ожидания заходит второй игрок на том же ките, начинается дуэль.</p>
+
+            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7;"><strong style="color: var(--accent);">Чем заканчивается дуэль</strong></p>
             <ul style="margin: 10px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
-                <li>Если вы новичок и ещё не проходили тест, вы направляетесь на <strong>квалификационный тест</strong>, где получите свой первый ранг.</li>
-                <li>Если у вас уже есть ранг LT3, вы можете продолжить путь через систему <strong>высокого теста</strong>, чтобы подниматься выше.</li>
+                <li>Дуэль заканчивается смертью одного из игроков. <strong>Кто умер — проиграл, кто остался жив — победил.</strong> Причина смерти не важна: соперник, падение, лава, вода и т. д.</li>
+                <li>Если игрок вышел с сервера, у него есть <strong>3 минуты</strong>, чтобы вернуться, — дуэль продолжится. Если он не вернулся, ему засчитывается <strong>автоматическое поражение</strong>.</li>
             </ul>
-            <p style="font-size: 13px; color: var(--text-muted); margin-top: 12px;">Подробнее о каждом из них — в соответствующих разделах ниже.</p>
-        </div>
-    </div>
-
-    <!-- 02: Квалификационный тест -->
-    <div class="hub-detail" id="hubQualTest">
-        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubQualTest')">← Ко всем разделам</button>
-        <div class="info-section">
-            <div class="info-section-title">Квалификационный тест</div>
-            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
-                Квалификационный тест предназначен для игроков, которые ещё не имеют ранга или хотят получить его с нуля. По результатам теста игроку может быть присвоен ранг от <strong>LT5 до LT3</strong> в зависимости от продемонстрированного скилла.
-            </p>
-            <div class="info-accent-box">
-                Тестирование могут проводить любые тестеры — для этого не требуется наличие специального ранга.<br>
-                Максимальный тир, который можно получить на квалификации — <strong>LT3</strong>.
-            </div>
-            <ul style="margin: 15px 0 0 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
-                <li>До ранга HT3 испытуемый оценивается по <strong>скиллу</strong>, а не по счёту. Тестер оценивает механику, принятие решений, контроль и другие аспекты игры.</li>
-                <li>Тесты можно проходить <strong>раз в 7 дней</strong>.</li>
-                <li>Тест проходит в формате <strong>до четырёх побед</strong>. Тестер может по своему усмотрению сократить или увеличить количество раундов для более точной оценки.</li>
-                <li>Как только бой заканчивается, тестер присваивает заслуженный тир.</li>
-            </ul>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-top: 15px;">
-                После получения ранга LT3 игрок может подавать заявки на высокий тест (HT3+) и двигаться дальше по цепочке: <strong style="color: var(--accent);">LT3 → HT3 → LT2 → HT2 → LT1 → HT1</strong>.
-            </p>
-        </div>
-    </div>
-
-    <!-- 03: Высокий HT3+ тест -->
-    <div class="hub-detail" id="hubHighTest">
-        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubHighTest')">← Ко всем разделам</button>
-
-        <div class="info-section">
-            <div class="info-section-title">Процесс высокого теста HT3+</div>
-            <div class="tier-hierarchy">
-                <div class="hierarchy-item"><span class="hierarchy-rank">LT3 → HT3</span><span class="hierarchy-desc">Обыграть одного LT3 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
-                <div class="hierarchy-item"><span class="hierarchy-rank">HT3 → LT2</span><span class="hierarchy-desc">Обыграть одного HT3 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
-                <div class="hierarchy-item"><span class="hierarchy-rank">LT2 → HT2</span><span class="hierarchy-desc">Обыграть одного LT2 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
-                <div class="hierarchy-item"><span class="hierarchy-rank">HT2 → LT1</span><span class="hierarchy-desc">Обыграть одного HT2 оппонента с минимальным счётом 4:2 в свою пользу.</span></div>
-            </div>
-
-            <div class="info-accent-box" style="margin-top: 18px;">
-                <strong>LT1 → HT1 (переход в чемпионы)</strong><br><br>
-                Претендент обязан обыграть <strong>всех действующих LT1</strong> с минимальным счётом 4:2 в свою пользу, а также действующего HT1, если таковой имеется.<br><br>
-                HT1 сохраняет свой статус, если проигрывает со счётом 4:3 — в этом случае претендент не получает ранг.<br>
-                Если претендент побеждает чемпиона со счётом 4:2, 4:1 или 4:0, он становится новым HT1, а проигравший чемпион понижается до LT1.
-            </div>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Замена оппонента при отсутствии нужного ранга</div>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px;">
-                Если на сервере нет игрока с требуемым рангом, тестируемый может сразиться с оппонентом на один ранг ниже, на один ранг выше или на два ранга выше. Условия зачёта при этом меняются:
-            </p>
-            <table class="faq-table">
-                <thead><tr><th>Ранг оппонента</th><th>Условие зачёта</th></tr></thead>
-                <tbody>
-                    <tr><td>Тот же ранг</td><td>Победа 4:2 или крупнее</td></tr>
-                    <tr><td>На 1 ранг ниже</td><td>Победа 4:1 или крупнее (4:2 не засчитывается)</td></tr>
-                    <tr><td>На 1 ранг выше</td><td>Достаточно проиграть 4:3</td></tr>
-                    <tr><td>На 2 ранга выше</td><td>Достаточно проиграть 4:2</td></tr>
-                </tbody>
-            </table>
-            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
-                <strong>Пример для LT3 → HT3:</strong> нет LT3 — можно сыграть против HT4 (нужна победа 4:1 или 4:0), против HT3 (достаточно проиграть 4:3) или против LT2 (достаточно проиграть 4:2). Правило работает одинаково для всех ступеней цепочки.
-            </p>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Исключение по решению администрации</div>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
-                По решению администрации игрок может пропустить одну или несколько ступеней цепочки и сразу сразиться с оппонентом более высокого ранга, если его уровень игры очевидно выше текущего тира. Решение принимается на основе оценки скилла игрока.
-            </p>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Система штрафных очков</div>
-            <p style="font-size: 13px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
-                Штрафные очки получают оба участника тиртеста в зависимости от исхода матча.
-            </p>
-            <ul style="margin: 0 0 12px 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
-                <li><strong>Оппонент</strong> (тот, кто проиграл тестируемому) получает очки, только если он имеет одинаковый или более высокий ранг, чем тестируемый. Если оппонент ниже рангом и проиграл — очки не начисляются.</li>
-                <li><strong>Тестируемый</strong> тоже получает очки за проваленный тиртест — по той же шкале в зависимости от счёта поражения.</li>
-            </ul>
-
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;"><strong style="color: var(--text-main);">Стандартные киты и SMP (FT4)</strong></p>
-            <table class="faq-table">
-                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
-                <tbody>
-                    <tr><td>4:3</td><td>0 очков</td></tr>
-                    <tr><td>4:2</td><td>1 очко</td></tr>
-                    <tr><td>4:1</td><td>1.5 очка</td></tr>
-                    <tr><td>4:0</td><td>2 очка</td></tr>
-                </tbody>
-            </table>
-
-            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Combo, Gapple (FT2)</strong></p>
-            <table class="faq-table">
-                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
-                <tbody>
-                    <tr><td>2:1</td><td>1 очко</td></tr>
-                    <tr><td>2:0</td><td>2 очка</td></tr>
-                </tbody>
-            </table>
-
-            <p style="font-size: 12px; color: var(--text-muted); margin: 16px 0 8px;"><strong style="color: var(--text-main);">Dragonhide, Beast, Emerald (FT6)</strong></p>
-            <table class="faq-table">
-                <thead><tr><th>Счёт поражения</th><th>Штраф</th></tr></thead>
-                <tbody>
-                    <tr><td>6:5</td><td>0 очков</td></tr>
-                    <tr><td>6:4</td><td>0.4 очка</td></tr>
-                    <tr><td>6:3</td><td>0.8 очка</td></tr>
-                    <tr><td>6:2</td><td>1.2 очка</td></tr>
-                    <tr><td>6:1</td><td>1.6 очка</td></tr>
-                    <tr><td>6:0</td><td>2 очка</td></tr>
-                </tbody>
-            </table>
 
             <div class="info-accent-box" style="margin-top: 15px;">
-                При накоплении <strong>2 очков</strong> игрок понижается в ранге на одну ступень, а очки сбрасываются до нуля.<br>
-                Все штрафные очки полностью обнуляются <strong>раз в месяц</strong> — независимо от того, сколько их накопилось.<br>
-                Количество очков отображается только в топе, отфильтрованном по конкретному киту — на общем профиле игрока штрафные очки не показываются.
+                Результат фиксируется автоматически — заявки и тестеры не нужны. Elo и ранг обновляются на сайте с небольшой задержкой.
             </div>
         </div>
     </div>
 
-    <!-- 04: Правила проведения тестов -->
-    <div class="hub-detail" id="hubRules">
-        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubRules')">← Ко всем разделам</button>
+    <!-- 02: Как считается Elo -->
+    <div class="hub-detail" id="hubEloSystem">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubEloSystem')">← Ко всем разделам</button>
+
+        <div class="info-section">
+            <div class="info-section-title">Основы</div>
+            <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
+                <li><strong style="color: var(--text-main);">Elo ведётся отдельно по каждому киту.</strong> Новый игрок на ките начинает с <strong>1000 Elo</strong> (ранг HT5).</li>
+                <li><strong style="color: var(--text-main);">Ранг не выдаётся вручную</strong> — он вычисляется из вашего Elo по таблице рангов (см. «Другая информация» → «Ранги и Elo»).</li>
+                <li><strong style="color: var(--text-main);">Ниже 0 Elo не опускается.</strong> Нельзя потерять больше, чем у вас есть: если у проигравшего осталось, например, 3 Elo, он теряет 3, а победитель получает ровно столько же.</li>
+            </ul>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Сколько Elo даёт дуэль</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
+                Победитель получает Elo, проигравший теряет. Размер изменения зависит от трёх вещей:
+            </p>
+            <ul style="margin: 0 0 14px 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+                <li><strong style="color: var(--text-main);">Разница в Elo с соперником.</strong> Победа над более сильным соперником приносит больше Elo, чем победа над более слабым.</li>
+                <li><strong style="color: var(--text-main);">K-фактор</strong> зависит от вашего ранга: у новичков он выше (рейтинг быстрее подстраивается под ваш уровень), у топ-игроков — ниже. У каждого из двух игроков он свой.</li>
+                <li><strong style="color: var(--text-main);">Множитель анти-абуза</strong> (см. ниже).</li>
+            </ul>
+            <div class="info-accent-box">
+                <strong>Выигрыш = K × (1 − E) × M</strong><br>
+                E — ожидаемая вероятность вашей победы (от 0 до 1), M — множитель анти-абуза. Результат округляется до целого. Проигравший теряет Elo, размер потери считается по его собственному K и тоже умножается на M. Из-за разных K суммы, которые получает победитель и теряет проигравший, могут отличаться.
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
+                <strong>Пример:</strong> игрок с 1200 Elo (MT4, K = 24) побеждает игрока с 1400 Elo при M = ×1. Его ожидаемая вероятность победы E ≈ 0.24, поэтому выигрыш 24 × (1 − 0.24) ≈ <strong>+18</strong>.
+            </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Анти-абуз</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7; margin-bottom: 12px;">
+                Чтобы нельзя было набивать Elo бесконечными дуэлями с одним и тем же соперником, начисление уменьшается. Считается, сколько дуэлей вы уже сыграли с этим соперником на этом ките за последние 2 часа (текущая не учитывается):
+            </p>
+            <table class="faq-table">
+                <thead><tr><th>Дуэлей за 2 часа</th><th>Множитель M</th></tr></thead>
+                <tbody>
+                    <tr><td>0–4</td><td>×1.00</td></tr>
+                    <tr><td>5–8</td><td>×0.50</td></tr>
+                    <tr><td>9–12</td><td>×0.25</td></tr>
+                    <tr><td>13–16</td><td>×0.10</td></tr>
+                    <tr><td>17 и больше</td><td>×0 — Elo не меняется</td></tr>
+                </tbody>
+            </table>
+            <div class="info-accent-box" style="margin-top: 15px;">
+                Счётчик отдельный для каждой пары игроков и для каждого кита. Окно в 2 часа скользящее: старые дуэли просто перестают учитываться. Автопоражение (не вернулись за 3 минуты) считается по той же формуле, что и обычное поражение.
+            </div>
+        </div>
+    </div>
+
+    <!-- 03: Правила дуэлей -->
+    <div class="hub-detail" id="hubDuelRules">
+        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubDuelRules')">← Ко всем разделам</button>
 
         <div class="rules-block">
-            <div class="rules-block-title">Правила проведения тестов</div>
+            <div class="rules-block-title">Правила дуэлей</div>
 
             <div class="rule-num-row">
                 <span class="rule-num">1</span>
@@ -484,7 +336,7 @@
                 <span class="rule-num">2</span>
                 <div>
                     <div class="rule-num-title">Не выходите из игры</div>
-                    <div class="rule-num-text">Если в этом нет необходимости — возвращайтесь как можно быстрее, если вас крашнуло. Полный выход на 10+ минут во время теста считается автоматическим проигрышем, если вы не предупредили соперника о возможном уходе.</div>
+                    <div class="rule-num-text">Если вас крашнуло или вы вышли — возвращайтесь как можно быстрее. У вас есть 3 минуты: если не вернулись, вам засчитывается автоматическое поражение.</div>
                 </div>
             </div>
 
@@ -499,53 +351,37 @@
             <div class="rule-num-row">
                 <span class="rule-num">4</span>
                 <div>
-                    <div class="rule-num-title">Не отвлекайте тестера</div>
-                    <div class="rule-num-text">Запрещено отвлекать тестера во время чужого теста — ожидайте свою очередь.</div>
+                    <div class="rule-num-title">Уважайте друг друга</div>
+                    <div class="rule-num-text">Запрещена ярая токсичность. Имейте уважение к оппоненту.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">5</span>
                 <div>
-                    <div class="rule-num-title">Уважайте друг друга</div>
-                    <div class="rule-num-text">Запрещена ярая токсичность. Имейте уважение к оппоненту и тестеру.</div>
+                    <div class="rule-num-title">Не передавайте аккаунт</div>
+                    <div class="rule-num-text">Запрещена передача аккаунта кому-либо.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">6</span>
                 <div>
-                    <div class="rule-num-title">Не передавайте аккаунт</div>
-                    <div class="rule-num-text">Запрещена передача верифицированного аккаунта кому-либо.</div>
+                    <div class="rule-num-title">Только предметы из кита</div>
+                    <div class="rule-num-text">Запрещено использовать посторонние предметы, которые не относятся к выбранному киту.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">7</span>
                 <div>
-                    <div class="rule-num-title">Следуйте указаниям тестера</div>
-                    <div class="rule-num-text">Если тестер проверяет вас и просит нажать на определённые кнопки — вы обязаны следовать его указаниям.</div>
+                    <div class="rule-num-title">Никакого вмешательства со стороны</div>
+                    <div class="rule-num-text">Запрещено мешать игровому процессу на арене или подсказывать в чате.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">8</span>
-                <div>
-                    <div class="rule-num-title">Только предметы из кита</div>
-                    <div class="rule-num-text">Запрещено использовать посторонние предметы, которые не относятся к тестируемому киту.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">9</span>
-                <div>
-                    <div class="rule-num-title">Никакого вмешательства со стороны</div>
-                    <div class="rule-num-text">Если кто-либо помешает игровому процессу на арене или подскажет в чате, матч подлежит переигровке. Возможны исключения по решению администрации.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">10</span>
                 <div>
                     <div class="rule-num-title">Решение администрации</div>
                     <div class="rule-num-text">В случаях, не предусмотренных правилами, могут применяться меры на усмотрение администрации.</div>
@@ -553,7 +389,7 @@
             </div>
 
             <div class="rule-num-row">
-                <span class="rule-num">11</span>
+                <span class="rule-num">9</span>
                 <div>
                     <div class="rule-num-title">Никаких читов</div>
                     <div class="rule-num-text">Запрещено использовать модификации и команды, дающие преимущество в бою.</div>
@@ -561,55 +397,39 @@
             </div>
 
             <div class="rule-num-row">
+                <span class="rule-num">10</span>
+                <div>
+                    <div class="rule-num-title">Один аккаунт в рейтинге</div>
+                    <div class="rule-num-text">Запрещено иметь более одного аккаунта в рейтинге (возможны исключения).</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
+                <span class="rule-num">11</span>
+                <div>
+                    <div class="rule-num-title">Запрещён зажим</div>
+                    <div class="rule-num-text">Использование холда во время дуэли запрещено.</div>
+                </div>
+            </div>
+
+            <div class="rule-num-row">
                 <span class="rule-num">12</span>
                 <div>
-                    <div class="rule-num-title">Один аккаунт в тирлисте</div>
-                    <div class="rule-num-text">Запрещено иметь более одного протестированного аккаунта в тирлисте (возможны исключения).</div>
+                    <div class="rule-num-title">Пересмотр результата администрацией</div>
+                    <div class="rule-num-text">Администрация вправе изменить рейтинг игрока, если сочтёт, что дуэль была проведена некорректно или с нарушением правил.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">13</span>
                 <div>
-                    <div class="rule-num-title">Кулдаун на пересдачу</div>
-                    <div class="rule-num-text">Тестироваться на одном и том же ките можно только раз в 7 дней — за исключением случая, когда вы повысились до LT3 и хотите сразу продолжить путь дальше.</div>
+                    <div class="rule-num-title">Языковое ограничение</div>
+                    <div class="rule-num-text">Участие в рейтинге доступно только русскоговорящим игрокам из стран СНГ.</div>
                 </div>
             </div>
 
             <div class="rule-num-row">
                 <span class="rule-num">14</span>
-                <div>
-                    <div class="rule-num-title">Запрещён зажим</div>
-                    <div class="rule-num-text">Использование холда во время теста запрещено.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">15</span>
-                <div>
-                    <div class="rule-num-title">Ранговые бои между игроками</div>
-                    <div class="rule-num-text">Игроки могут сразиться друг с другом за ранг по обоюдному согласию, но такой матч обязательно должен проходить в присутствии тестера.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">16</span>
-                <div>
-                    <div class="rule-num-title">Пересмотр результата администрацией</div>
-                    <div class="rule-num-text">Администрация вправе аннулировать или изменить результат теста, если сочтёт, что игрок объективно не соответствует полученному рангу или тестирование было проведено некорректно.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">17</span>
-                <div>
-                    <div class="rule-num-title">Языковое ограничение</div>
-                    <div class="rule-num-text">Тестирование доступно только русскоговорящим игрокам из стран СНГ.</div>
-                </div>
-            </div>
-
-            <div class="rule-num-row">
-                <span class="rule-num">18</span>
                 <div>
                     <div class="rule-num-title">Не избегайте урона от падения</div>
                     <div class="rule-num-text">Запрещено уклоняться от урона от падения выходом из игры или приземлением на крышу арены, когда вас подбросили вверх.</div>
@@ -619,31 +439,6 @@
 
         <div class="info-accent-box">
             <strong>Санкции за нарушение:</strong> временный бан → перепроверка рангов → аннулирование рангов → перманентный бан при повторных нарушениях.
-        </div>
-    </div>
-
-    <!-- 05: Тестеры (бывший testersSubTab) -->
-    <div class="hub-detail" id="hubTesters">
-        <button class="hub-detail-back" onclick="closeHubDetail('testingHubGrid', 'hubTesters')">← Ко всем разделам</button>
-        <div class="info-section">
-            <div class="info-section-title">Тестеры</div>
-            <p style="font-size: 14px; color: var(--text-main); line-height: 1.6; margin-bottom: 20px;">
-                Тестеры — это опытные игроки, которые проводят проверку навыков и помогают определить ваш уровень мастерства на платформе.
-            </p>
-            <div class="testers-grid">
-                <div class="tester-card" onclick="openProfileByName('-999-')">
-                    <div class="tester-name">-999-</div>
-                    <div class="tester-status">Старший Тестер</div>
-                </div>
-                <div class="tester-card" onclick="openProfileByName('DzIla_EDITSmob')">
-                    <div class="tester-name">DzIla_EDITSmob</div>
-                    <div class="tester-status">Старший Тестер</div>
-                </div>
-                <div class="tester-card" onclick="openProfileByName('-BaCk-')">
-                    <div class="tester-name">-BaCk-</div>
-                    <div class="tester-status">Квалификационный Тестер</div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -656,39 +451,29 @@
     <p class="hub-intro" id="otherInfoHubIntro">Выберите раздел, чтобы узнать подробности.</p>
 
     <div class="hub-grid" id="otherInfoHubGrid">
-        <div class="hub-card" data-target="hubPoints">
+        <div class="hub-card" data-target="hubElo">
             <div class="hub-card-bg"></div>
             <div class="hub-card-num">01</div>
-            <div class="hub-card-heading"><span>РАСПРЕДЕЛЕНИЕ<br>ОЧКОВ</span></div>
+            <div class="hub-card-heading"><span>РАНГИ<br>И ELO</span></div>
             <div class="hub-card-footer">
-                <span class="hub-card-title">Распределение очков</span>
-                <span class="hub-card-link">Читать →</span>
-            </div>
-        </div>
-
-        <div class="hub-card" data-target="hubRetired">
-            <div class="hub-card-bg"></div>
-            <div class="hub-card-num">02</div>
-            <div class="hub-card-heading"><span>СИСТЕМА<br>RETIRED</span></div>
-            <div class="hub-card-footer">
-                <span class="hub-card-title">Система Retired</span>
+                <span class="hub-card-title">Ранги и Elo</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
 
         <div class="hub-card" data-target="hubModes">
             <div class="hub-card-bg"></div>
-            <div class="hub-card-num">03</div>
-            <div class="hub-card-heading"><span>ТЕСТИРУЕМЫЕ<br>РЕЖИМЫ</span></div>
+            <div class="hub-card-num">02</div>
+            <div class="hub-card-heading"><span>РЕЖИМЫ</span></div>
             <div class="hub-card-footer">
-                <span class="hub-card-title">Тестируемые режимы</span>
+                <span class="hub-card-title">Режимы</span>
                 <span class="hub-card-link">Читать →</span>
             </div>
         </div>
 
         <div class="hub-card" data-target="hubHall">
             <div class="hub-card-bg"></div>
-            <div class="hub-card-num">04</div>
+            <div class="hub-card-num">03</div>
             <div class="hub-card-heading"><span>ДОСКА<br>ПОЧЕТА</span></div>
             <div class="hub-card-footer">
                 <span class="hub-card-title">Доска почета</span>
@@ -698,7 +483,7 @@
 
         <div class="hub-card" data-target="hubAvgTier">
             <div class="hub-card-bg"></div>
-            <div class="hub-card-num">05</div>
+            <div class="hub-card-num">04</div>
             <div class="hub-card-heading"><span>СРЕДНИЙ<br>ОБЩИЙ РАНГ</span></div>
             <div class="hub-card-footer">
                 <span class="hub-card-title">Средний общий ранг</span>
@@ -707,67 +492,29 @@
         </div>
     </div>
 
-    <!-- 01: Распределение очков (бывший ptsSubTab) -->
-    <div class="hub-detail" id="hubPoints">
-        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubPoints')">← Ко всем разделам</button>
+    <!-- 01: Ранги и Elo -->
+    <div class="hub-detail" id="hubElo">
+        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubElo')">← Ко всем разделам</button>
         <div class="info-section">
-            <div class="info-section-title">Распределение очков PTS</div>
-            <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 15px;">
-                Рейтинг игрока формируется путём суммирования очков PTS, полученных только за основные (main) киты. Очки, набранные за дополнительные (sub) киты, в общий рейтинг не учитываются.
+            <div class="info-section-title">Ранги и Elo</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px;">
+                Ранг определяется вашим Elo на конкретном ките. Всего 15 рангов: 5 ступеней (1 — высшая, 5 — низшая), и внутри каждой три подступени — High (HT), Middle (MT) и Low (LT). Например, HT1 — самый высокий ранг, LT5 — самый низкий. Новый игрок начинает с 1000 Elo (HT5).
             </p>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px;" id="overallModeText"></p>
             <table class="faq-table">
-                <thead><tr><th>Тир</th><th>PTS</th></tr></thead>
-                <tbody id="faqTableBody"></tbody>
+                <thead><tr><th>Ранг</th><th>Elo</th><th>K</th></tr></thead>
+                <tbody id="eloTableBody"></tbody>
             </table>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
+                <strong>K-фактор</strong> определяет, насколько сильно меняется Elo после дуэли: у новичков он выше, у топ-игроков ниже. Подробнее — в разделе «Как играть» → «Как считается Elo».
+            </p>
         </div>
     </div>
 
-    <!-- 02: Система Retired -->
-    <div class="hub-detail" id="hubRetired">
-        <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubRetired')">← Ко всем разделам</button>
-        <div class="info-section">
-            <div class="info-section-title">Статус Retired</div>
-            <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
-                Статус Retired предназначен для игроков, которые хотят временно выйти из активной системы тиртестов и PvP-соревнований. Это позволяет избежать штрафных очков и понижений в периоды неактивности.
-            </p>
-            <div class="info-accent-box">
-                Начиная с ранга <strong>HT3</strong>, любой игрок имеет право добровольно уйти в Retired. Игроки с более низкими рангами не могут получить этот статус, так как они ещё находятся на этапе квалификации.
-            </div>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Основания для получения статуса</div>
-            <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
-                <li><strong style="color: var(--text-main);">Добровольное желание игрока.</strong> Игрок может в любой момент подать заявку на уход в Retired через администрацию или соответствующую систему.</li>
-                <li><strong style="color: var(--text-main);">Автоматически.</strong> Если игрок не проходил тиртест по конкретному киту более двух месяцев, система автоматически присваивает ему статус Retired по этому киту — чтобы неактивные игроки не занимали места в топе и не создавали иллюзию активности.</li>
-            </ul>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Обозначение и влияние на рейтинг</div>
-            <p style="font-size: 13px; color: var(--text-main); line-height: 1.7; margin-bottom: 10px;">
-                При уходе в Retired по конкретному киту к его названию добавляется буква <strong style="color:#ff4747;">R</strong>, например <strong style="color:#ff4747;">R</strong>HT1 — это позволяет сразу видеть, что игрок временно неактивен.
-            </p>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
-                Игроки со статусом Retired исключаются из общего топа, чтобы в рейтинге отображались только активные игроки, которые действительно участвуют в PvP и тиртестах.
-            </p>
-        </div>
-
-        <div class="info-section">
-            <div class="info-section-title">Возврат в активный режим</div>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
-                Чтобы снова стать активным, игроку достаточно пройти тиртест по соответствующему киту. Как только тиртест успешно завершён, статус Retired снимается, и игрок снова отображается в топе и может участвовать в PvP на общих основаниях.
-            </p>
-            <div class="info-accent-box" style="margin-top: 15px;">
-                Статус Retired применяется <strong>индивидуально к каждому киту</strong>. Игрок может быть активным на одном ките и находиться в Retired на другом — например, иметь ранг HT1 на Hardcore и одновременно статус RHT1 на Emerald Pot, если давно не играл на нём.
-            </div>
-        </div>
-    </div>
-
-    <!-- 03: Тестируемые режимы (бывший wikiTab) -->
+    <!-- 02: Режимы (бывший wikiTab) -->
     <div class="hub-detail" id="hubModes">
         <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubModes')">← Ко всем разделам</button>
-        <h2 class="section-title">Тестируемые режимы</h2>
+        <h2 class="section-title">Режимы</h2>
 
         <div class="wiki-grid">
         <div class="wiki-card">
@@ -1078,7 +825,7 @@
         </div>
     </div>
 
-    <!-- 04: Доска почета (бывший hallTab) -->
+    <!-- 03: Доска почета (бывший hallTab) -->
     <div class="hub-detail" id="hubHall">
         <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubHall')">← Ко всем разделам</button>
         <h2 class="section-title">Доска почета</h2>
@@ -1102,30 +849,40 @@
         </div>
     </div>
 
-    <!-- 05: Средний общий ранг -->
+    <!-- 04: Средний общий ранг -->
     <div class="hub-detail" id="hubAvgTier">
         <button class="hub-detail-back" onclick="closeHubDetail('otherInfoHubGrid', 'hubAvgTier')">← Ко всем разделам</button>
         <div class="info-section">
             <div class="info-section-title">Что такое средний общий ранг</div>
             <p style="font-size: 14px; color: var(--text-main); line-height: 1.7; margin-bottom: 12px;">
-                Средний общий ранг показывает общий уровень игрока по всем китам сразу — и основным (main), и дополнительным (sub). Он считается автоматически как усреднённое значение всех ваших тиров, поэтому обновляется каждый раз, когда меняется хотя бы один из них.
+                Средний общий ранг показывает общий уровень игрока по всем китам сразу — и основным (main), и дополнительным (sub). Он считается автоматически и обновляется после каждой дуэли.
             </p>
             <div class="info-accent-box">
-                Пересчёт происходит без вашего участия — сдавать отдельный тест на средний ранг не нужно, он всегда отражает актуальное состояние вашего профиля.
+                <strong>Как считается:</strong> берётся среднее Elo по всем китам, на которых у вас есть рейтинг (киты, на которых вы ещё не играли, не учитываются), и по этому значению определяется ранг по общей таблице — с учётом подступеней HT, MT и LT.
             </div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
+                <strong>Пример:</strong> Hardcore — 1600 Elo, Beast — 1400 Elo, Combo — 1000 Elo. Среднее: (1600 + 1400 + 1000) / 3 ≈ 1333 Elo — это ранг <strong>HT4</strong> (1250–1349).
+            </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Почему усредняется Elo, а не ранги</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
+                Ступени рангов в Elo разной ширины (например, HT5 — всего 50 Elo, а LT1 — 150), поэтому усреднение именно Elo точнее, чем усреднение номеров рангов.
+            </p>
         </div>
 
         <div class="info-section">
             <div class="info-section-title">Где он используется</div>
             <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
-                <li><strong style="color: var(--text-main);">Тег на сервере.</strong> Средний общий ранг отображается в вашем тег на игровом сервере, показывая остальным ваш примерный уровень с первого взгляда.</li>
+                <li><strong style="color: var(--text-main);">Тег на сервере.</strong> Средний общий ранг отображается в вашем теге на игровом сервере, показывая остальным ваш примерный уровень с первого взгляда.</li>
                 <li><strong style="color: var(--text-main);">Карточка профиля на сайте.</strong> Это же значение видно в вашей карточке в общем рейтинге — так проще сравнивать общий уровень игроков, а не только результаты по отдельным китам.</li>
             </ul>
         </div>
     </div>
 </div>
 
-<script src="js/config.js"></script>
+<script src="js/config.js?v=2.0.0"></script>
 <script>
 function loadPlayersScript(url, callback) {
     const script = document.createElement('script');
@@ -1149,6 +906,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2.0.0"></script>
 </body>
 </html>
