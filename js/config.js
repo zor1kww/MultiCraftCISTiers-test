@@ -17,26 +17,53 @@ const kitImages = {
     "Crystal": "assets/logos/crystal.png"
 };
 
-// Очки PTS за каждый тир
-const tierPoints = {
-    HT1: 60, LT1: 45,
-    HT2: 30, LT2: 20,
-    HT3: 10, LT3: 6,
-    HT4: 4,  LT4: 3,
-    HT5: 2,  LT5: 1,
-    Unranked: 0
-};
+// ==========================================
+// ЭЛО И РАНГИ
+// ==========================================
 
-// Цветовая палитра тиров (для рамок и текста)
-const tierColors = {
-    HT1: '#DAA520', LT1: '#DAA520', 
-    HT2: '#A9A9A9', LT2: '#A9A9A9', 
-    HT3: '#A0522D', LT3: '#8B4513', 
-    HT4: '#808080', LT4: '#696969', 
-    HT5: '#008080', LT5: '#2F4F4F', 
-    Unranked: '#444b66'
-};
+// Стартовое Elo игрока на каждом ките (= нижняя часть HT5).
+const STARTING_ELO = 1000;
+
+// 15 рангов от сильного к слабому. Ранг НЕ хранится в базе - он всегда
+// вычисляется из Elo по этой таблице (min - нижняя граница диапазона).
+// ВАЖНО: таблица должна совпадать с TIER_TABLE в elo.py на боте
+// (там же K-фактор: у новичка выше, у топов ниже).
+// Цвета записаны hex-значениями (а не "gold"/"silver"), потому что код
+// сайта дописывает к цвету прозрачность (например, color + "44").
+const eloTiers = [
+    { tier: 'HT1', min: 2250, k: 8,  color: '#FFD700' },
+    { tier: 'MT1', min: 2100, k: 10, color: '#ECCE10' },
+    { tier: 'LT1', min: 1950, k: 12, color: '#DAA520' },
+
+    { tier: 'HT2', min: 1850, k: 12, color: '#C0C0C0' },
+    { tier: 'MT2', min: 1750, k: 14, color: '#B4B4B4' },
+    { tier: 'LT2', min: 1650, k: 16, color: '#A9A9A9' },
+
+    { tier: 'HT3', min: 1550, k: 16, color: '#A0522D' },
+    { tier: 'MT3', min: 1450, k: 18, color: '#964B20' },
+    { tier: 'LT3', min: 1350, k: 20, color: '#8B4513' },
+
+    { tier: 'HT4', min: 1250, k: 22, color: '#808080' },
+    { tier: 'MT4', min: 1150, k: 24, color: '#757575' },
+    { tier: 'LT4', min: 1050, k: 28, color: '#696969' },
+
+    { tier: 'HT5', min: 1000, k: 32, color: '#008080' },
+    { tier: 'MT5', min: 950,  k: 36, color: '#186868' },
+    { tier: 'LT5', min: 0,    k: 40, color: '#2F4F4F' }
+];
+
+// Цветовая палитра рангов (для рамок и текста) - строится из таблицы выше
+const tierColors = { Unranked: '#444b66' };
+eloTiers.forEach(t => { tierColors[t.tier] = t.color; });
+
+// Как считать Elo в общем топе (Main/Sub Overall):
+//   'sum' - сумма Elo по китам (прямая замена прежних очков: чем больше
+//           китов сыграно и чем выше Elo, тем выше место);
+//   'avg' - среднее Elo по сыгранным китам (оценивает уровень, а не
+//           количество китов).
+const overallEloMode = 'sum';
 
 // Списки основных и дополнительных режимов
 const maintiers = ["Hardcore", "Manhunt", "Diamond Pot", "Beast", "Emerald", "Emerald Pot", "RVM", "Dragonhide", "Pickaxe", "SMP", "Vanilla"];
 const subtiers = ["Combo", "Gapple", "Mace", "Crystal"];
+    
