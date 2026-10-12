@@ -37,228 +37,137 @@ function toggleTheme() {
     }
 }
 
+
 // ==========================================
-// 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И ПАРСИНГ ТИРОВ
+// 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ: ELO И РАНГИ
 // ==========================================
 
-// Порядок тиров от старшего к младшему. Единый источник правды для
-// сравнений тиров и для определения, какие тиры вообще могут быть Retired.
-const TIER_ORDER = ['HT1', 'LT1', 'HT2', 'LT2', 'HT3', 'LT3', 'HT4', 'LT4', 'HT5', 'LT5'];
+// Таблица рангов из config.js (от сильного к слабому). Ранг НЕ хранится
+// отдельно - он всегда вычисляется из Elo (см. getTierByElo).
+const ELO_TIERS = (typeof eloTiers !== 'undefined') ? eloTiers : [];
+const TIER_ORDER = ELO_TIERS.map(t => t.tier);
 
-// Retired-статус (ручной или автоматический по сроку) возможен только
-// начиная с HT3 и выше: HT1, LT1, HT2, LT2, HT3.
-const RETIRED_ELIGIBLE_TIERS = TIER_ORDER.slice(0, TIER_ORDER.indexOf('HT3') + 1);
-
-// Через сколько дней без пересдачи кит автоматически считается Retired
-const RETIRED_AUTO_DAYS = 60;
-
-// Проверка: истёк ли срок с даты последнего теста по киту (>60 дней)
-function isDateExpired(dateStr) {
-    if (!dateStr) return false;
-    const testDate = new Date(dateStr);
-    if (isNaN(testDate.getTime())) return false;
-
-    const diffMs = Date.now() - testDate.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return diffDays > RETIRED_AUTO_DAYS;
+// Экранирование текста перед вставкой в innerHTML (ники приходят из базы)
+function escapeHTML(value) {
+    return String(value === undefined || value === null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
 
-// ==========================================
-// ШТРАФНЫЕ ОЧКИ (только для HT3+ тестов, см. penalty_logic.py на боте)
-// ==========================================
-
-// Через сколько дней с даты ПЕРВОГО начисления в текущем цикле весь
-// накопленный штраф по киту истекает целиком (обнуляется). Должно совпадать
-// с PENALTY_EXPIRY_DAYS в bot_config.py.
-const PENALTY_EXPIRY_DAYS = 30;
-
-// Порог автопонижения - должен совпадать с PENALTY_DEMOTION_THRESHOLD в bot_config.py
-const PENALTY_DEMOTION_THRESHOLD = 2.0;
-
-// Та же проверка истечения цикла штрафов, что и isDateExpired, но со своим
-// порогом (30 дней вместо 60) - вынесена отдельно для ясности читаемого кода
-function isPenaltyCycleExpired(dateStr) {
-    if (!dateStr) return false;
-    const startDate = new Date(dateStr);
-    if (isNaN(startDate.getTime())) return false;
-
-    const diffMs = Date.now() - startDate.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return diffDays > PENALTY_EXPIRY_DAYS;
+// Атрибут onclick, открывающий профиль игрока по нику. Ник кодируется,
+// поэтому в разметку не попадают кавычки и спецсимволы.
+function profileOnClick(name) {
+    const encoded = encodeURIComponent(String(name)).replace(/'/g, '%27');
+    return `onclick="openProfileByName(decodeURIComponent('${encoded}'))"`;
 }
 
-// Возвращает актуальные (не истёкшие) штрафные очки игрока по одному киту.
-// penaltyEntry - { points, firstPenaltyDate } или undefined/null.
-// Порт effective_penalty_points() из penalty_logic.py - истёкший цикл
-// показывает 0, даже если бот ещё не записал это явно в players.js
-// (обнуление на боте происходит лениво, только при следующем начислении).
-function getEffectivePenalty(player, kit) {
-    if (!player || !player.penaltyByKit) return 0;
-    const entry = player.penaltyByKit[kit];
-    if (!entry) return 0;
-    if (isPenaltyCycleExpired(entry.firstPenaltyDate)) return 0;
-    return entry.points || 0;
+function tierColorOf(tier, fallback) {
+    const colors = (typeof tierColors !== 'undefined') ? tierColors : {};
+    return colors[tier] || fallback;
 }
 
-// Суммарные актуальные штрафные очки игрока по ВСЕМ китам сразу
-// (для отображения общего числа в шапке профиля)
-function getTotalEffectivePenalty(player) {
-    if (!player || !player.penaltyByKit) return 0;
-    let total = 0;
-    for (const kit in player.penaltyByKit) {
-        total += getEffectivePenalty(player, kit);
+// Ранг по Elo: первая ступень таблицы, нижняя граница которой не выше Elo.
+function getTierByElo(elo) {
+    if (typeof elo !== 'number' || isNaN(elo)) return 'Unranked';
+    for (const t of ELO_TIERS) {
+        if (elo >= t.min) return t.tier;
     }
-    return total;
+    return ELO_TIERS.length ? ELO_TIERS[ELO_TIERS.length - 1].tier : 'Unranked';
 }
 
-// Универсальный парсер данных тира.
-// Поддерживает новый формат { tier, date, retired } и, для обратной
-// совместимости, старый формат в виде строки ("HT3" / "RHT3").
-function parseTierInfo(tierData) {
-    if (!tierData) return { tier: "Unranked", isRetired: false, pts: 0 };
+// Нижняя граница Elo ранга (нужна только для данных старого формата без Elo)
+function getTierFloorElo(tier) {
+    const found = ELO_TIERS.find(t => t.tier === tier);
+    return found ? found.min : null;
+}
 
-    let tier = "Unranked";
-    let manualRetired = false;
-    let testDate = null;
+// Рейтинг игрока на ките: { elo, tier }.
+//  - Новый формат: tiers[kit] = { elo, tier, date } -> ранг считается из elo.
+//  - Старый формат (до перехода на Elo): есть только ранг, elo = null.
+//    Такие данные показываются, пока players.js не заменён экспортом из
+//    Elo-системы, но Elo у них нет.
+function getKitRating(player, kit) {
+    const data = (player && player.tiers) ? player.tiers[kit] : null;
+    if (!data) return { elo: null, tier: 'Unranked' };
 
-    if (typeof tierData === 'string') {
-        // Старый формат-строка (данные до миграции) - поддерживаем на всякий случай
-        if (tierData.startsWith('R') && tierData.length > 1) {
-            manualRetired = true;
-            tier = tierData.substring(1);
-        } else {
-            tier = tierData;
-        }
-    } else if (typeof tierData === 'object') {
-        tier = tierData.tier || "Unranked";
-        manualRetired = tierData.retired === true;
-        testDate = tierData.date || null;
+    if (typeof data === 'object' && typeof data.elo === 'number') {
+        return { elo: data.elo, tier: getTierByElo(data.elo) };
     }
 
-    // Retired ниже HT3 невозможен в принципе, независимо от того, что
-    // записано в базе (защита от рассинхрона/старых данных)
-    const eligibleForRetired = RETIRED_ELIGIBLE_TIERS.includes(tier);
-
-    const autoRetiredByDate = eligibleForRetired && isDateExpired(testDate);
-    const isRetired = eligibleForRetired && (manualRetired || autoRetiredByDate);
-
-    // Безопасное получение очков
-    const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
-    return {
-        tier: tier,
-        isRetired: isRetired,
-        date: testDate,
-        pts: activePts[tier] || 0
-    };
+    const legacyTier = (typeof data === 'string')
+        ? data.replace(/^R(?=[HML]T)/, '')
+        : data.tier;
+    return { elo: null, tier: TIER_ORDER.includes(legacyTier) ? legacyTier : 'Unranked' };
 }
 
-// Хелпер для получения чистого названия тира (без префикса R)
+// Хелпер: чистое название ранга игрока на ките ("Unranked", если не играл)
 function getCleanTier(player, kit) {
-    if (!player || !player.tiers) return "Unranked";
-    return parseTierInfo(player.tiers[kit]).tier;
+    return getKitRating(player, kit).tier;
 }
 
-// Хелпер для определения, является ли конкретный кит игрока "Retired"
-function isKitRetired(player, kit) {
-    if (!player || !player.tiers) return false;
-    return parseTierInfo(player.tiers[kit]).isRetired;
+// Elo для сортировки и усреднения: настоящее Elo, а для данных старого
+// формата без Elo - нижняя граница ранга. null - если игрок не играл кит.
+function getEffectiveElo(rating) {
+    if (!rating || rating.tier === 'Unranked') return null;
+    if (rating.elo !== null) return rating.elo;
+    return getTierFloorElo(rating.tier);
 }
 
-// Проверка: есть ли у игрока ХОТЯ БЫ ОДИН кит со статусом retired (Только для Main китов)
-function hasAnyRetiredKit(player) {
-    if (!player) return false;
-    if (player.retired === true) return true;
-    
-    const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const allKits = [...activeMaintiers];
-    
-    for (let i = 0; i < allKits.length; i++) {
-        if (isKitRetired(player, allKits[i])) {
-            const tier = getCleanTier(player, allKits[i]);
-            if (tier !== "Unranked") {
-                return true;
-            }
-        }
-    }
-    return false;
+// Elo для показа пользователю ("—", если у старой записи нет Elo)
+function formatElo(rating) {
+    return (rating && rating.elo !== null) ? String(Math.round(rating.elo)) : '—';
 }
 
-// Расчет общих очков игрока по массиву китов (Main или Sub)
-function calcPoints(player, kits) {
+function isAverageOverallMode() {
+    return (typeof overallEloMode !== 'undefined') && overallEloMode === 'avg';
+}
+
+// Elo игрока по группе китов (Main или Sub) для общего топа:
+// сумма (прямая замена прежних очков) или среднее - см. overallEloMode в config.js.
+// Киты, на которых игрок не играл, не учитываются.
+function calcOverallElo(player, kits) {
     if (!player || !kits) return 0;
-    return kits.reduce((total, kit) => total + parseTierInfo(player.tiers[kit]).pts, 0);
+    const values = kits
+        .map(kit => getEffectiveElo(getKitRating(player, kit)))
+        .filter(v => v !== null);
+    if (values.length === 0) return 0;
+    const total = values.reduce((sum, v) => sum + v, 0);
+    return Math.round(isAverageOverallMode() ? total / values.length : total);
 }
 
-// Расчет среднего тира игрока по всем его Main и Sub китам (исключая Unranked)
-function calcAverageTier(player) {
-    if (!player || !player.tiers) return "Unranked";
-    
-    // Получаем оба массива китов (если subtiers не задан, используем пустой массив)
+// Среднее Elo игрока по ВСЕМ его китам (Main + Sub), на которых есть рейтинг.
+// null - если игрок ещё не играл ни одного кита.
+function calcAverageElo(player) {
+    if (!player || !player.tiers) return null;
     const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
     const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
-    
-    // Объединяем их в один общий список для расчёта
-    const allKits = [...activeMaintiers, ...activeSubtiers];
-    
-    const tierWeights = {
-        'HT1': 10, 'LT1': 9,
-        'HT2': 8,  'LT2': 7,
-        'HT3': 6,  'LT3': 5,
-        'HT4': 4,  'LT4': 3,
-        'HT5': 2,  'LT5': 1
-    };
-    
-    const reverseWeights = {
-        10: 'HT1', 9: 'LT1',
-        8: 'HT2',  7: 'LT2',
-        6: 'HT3',  5: 'LT3',
-        4: 'HT4',  3: 'LT4',
-        2: 'HT5',  1: 'LT5'
-    };
-
-    let totalWeight = 0;
-    let count = 0;
-
-    // Пробегаемся по абсолютно всем китам (Main + Sub)
-    allKits.forEach(kit => {
-        const tier = getCleanTier(player, kit);
-        if (tier !== "Unranked" && tierWeights[tier] !== undefined) {
-            totalWeight += tierWeights[tier];
-            count++;
-        }
-    });
-
-    if (count === 0) return "Unranked";
-    
-    const avgWeight = Math.round(totalWeight / count);
-    return reverseWeights[avgWeight] || "Unranked";
+    const values = [...activeMaintiers, ...activeSubtiers]
+        .map(kit => getEffectiveElo(getKitRating(player, kit)))
+        .filter(v => v !== null);
+    if (values.length === 0) return null;
+    return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-// Генерация HTML-бейдж-тиров для правой стороны (список в один тон или с R)
-function getTierBadge(tier, appendR = false) {
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    const color = activeColors[tier] || '#fff';
-    
-    if (appendR && tier !== "Unranked") {
-        return `<span class="tier-badge" style="border: 1px solid ${color}44; background: ${color}11;">
-            <span style="color: #ff4a4a; font-weight: bold;">R</span><span style="color: ${color};">${tier}</span>
-        </span>`;
-    }
+// Средний общий ранг: среднее Elo по всем китам -> ранг по таблице (включая
+// подступени MT). Усредняется именно Elo, а не номера рангов: ступени рангов
+// неравной ширины (HT5 - 50 Elo, LT1 - 150), поэтому усреднение номеров
+// искажало бы результат.
+function calcAverageTier(player) {
+    const avg = calcAverageElo(player);
+    return avg === null ? 'Unranked' : getTierByElo(Math.round(avg));
+}
+
+// Генерация HTML-бейджа ранга
+function getTierBadge(tier) {
+    const color = tierColorOf(tier, '#fff');
     return `<span class="tier-badge" style="color: ${color}; border: 1px solid ${color}44; background: ${color}11;">${tier}</span>`;
 }
 
-// Генерация маленького тега тира (среднего или конкретного) после устройства.
-function getMetaTierTag(tier, isRetired = false) {
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    const color = activeColors[tier] || '#8892b0';
-    
-    if (isRetired && tier !== "Unranked") {
-        return `
-        <span class="player-meta-tag" style="border-color: ${color}55; background: ${color}11; padding: 2px 6px;">
-            <span style="color: #ff4a4a; font-weight: bold; margin-right: 1px;">R</span><span style="color: ${color}; font-weight: bold;">${tier}</span>
-        </span>`;
-    }
-    
+// Генерация маленького тега ранга (среднего или конкретного)
+function getMetaTierTag(tier) {
+    const color = tierColorOf(tier, '#8892b0');
     return `<span class="player-meta-tag" style="color: ${color}; border-color: ${color}55; background: ${color}11; font-weight: bold;">${tier}</span>`;
 }
 
@@ -270,135 +179,93 @@ function isTester(playerName) {
     return testers.includes(nameLower);
 }
 
-// Открытие профиля игрока по имени (используется в Доске почета и вкладке Тестеры,
-// где нет отфильтрованного списка карточек, а есть просто статичное имя)
+// Открытие профиля игрока по имени (карточки в топе, дуэли, Доска почета)
 function openProfileByName(playerName) {
     if (typeof players === 'undefined' || !Array.isArray(players)) {
         console.warn('База игроков ещё не загружена.');
         return;
     }
-    const found = players.find(p => p.name && p.name.toLowerCase() === playerName.toLowerCase());
+    const found = players.find(p => p.name && p.name.toLowerCase() === String(playerName).toLowerCase());
     if (!found) {
         console.warn(`Игрок "${playerName}" не найден в базе.`);
         return;
     }
-    const encoded = encodeURIComponent(JSON.stringify([found]));
-    openProfile(0, encoded);
+    showProfile(found);
 }
 
 // ==========================================
 // 3. ОКНА ПРОФИЛЕЙ (МОДАЛЬНЫЕ ОКНА)
 // ==========================================
 
+// Строка кита в профиле: иконка, название, ранг и Elo
+function buildKitRowHTML(player, kit) {
+    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const rating = getKitRating(player, kit);
+    const eloText = rating.tier === 'Unranked' ? '' : (rating.elo !== null ? `${formatElo(rating)} Elo` : '—');
+    return `<div class="modal-row">
+        <div class="modal-kit-left">
+            <img class="modal-kit-icon" src="${activeKitImages[kit] || ''}" onerror="this.style.opacity='0'" alt="">
+            <span class="m-kit">${kit}</span>
+        </div>
+        <div class="m-right-side">
+            ${getTierBadge(rating.tier)}
+            <span class="m-elo-box">${eloText}</span>
+        </div>
+    </div>`;
+}
+
 // Открытие детального профиля игрока в модальном окне
-function openProfile(idx, filteredPlayersJSON) {
+function showProfile(player) {
     try {
-        const localFiltered = JSON.parse(decodeURIComponent(filteredPlayersJSON));
-        const player = localFiltered[idx];
-        if (!player) return;
-        
         const modalName = document.getElementById('modalPlayerName');
-        if (modalName) modalName.innerHTML = player.name;
-        
-        // Генерация красивых тегов оформления для профиля в ряд
+        if (modalName) modalName.textContent = player.name;
+
+        // Теги профиля: регион и ранг (общий средний - в общих топах, иначе
+        // ранг по выбранному киту)
         let metaHTML = '';
         if (player.region) {
-            metaHTML += `<span class="player-meta-tag">${player.region}</span>`;
+            metaHTML += `<span class="player-meta-tag">${escapeHTML(player.region)}</span>`;
         }
 
-        // Сбор и отображение объединенного тира в модальном окне
         const targetKit = window.currentKitFilter || 'all';
-        const displayProfileRetiredTag = hasAnyRetiredKit(player);
-        
-        if (targetKit === 'all' || targetKit === 'sub-all') {
-            const avgTier = calcAverageTier(player);
-            if (avgTier !== "Unranked") {
-                metaHTML += getMetaTierTag(avgTier, displayProfileRetiredTag);
-            }
-        } else {
-            const currentTier = getCleanTier(player, targetKit);
-            const ret = isKitRetired(player, targetKit);
-            if (currentTier !== "Unranked") {
-                metaHTML += getMetaTierTag(currentTier, ret);
-            }
+        const shownTier = (targetKit === 'all' || targetKit === 'sub-all')
+            ? calcAverageTier(player)
+            : getCleanTier(player, targetKit);
+        if (shownTier !== 'Unranked') {
+            metaHTML += getMetaTierTag(shownTier);
         }
 
         const modalMeta = document.getElementById('modalPlayerMeta');
         if (modalMeta) {
             modalMeta.innerHTML = `<div class="player-meta-box" style="justify-content: flex-start; margin-top: 5px; gap: 6px;">${metaHTML}</div>`;
         }
-        
+
         const roleContainer = document.getElementById('modalRoleContainer');
         if (roleContainer) {
-            if (isTester(player.name)) {
-                roleContainer.innerHTML = `<span class="custom-role-badge">Tester</span>`;
-            } else {
-                roleContainer.innerHTML = '';
-            }
-        }
-
-        // Штрафные очки убраны из профиля игрока по требованию: теперь
-        // они видны только в топе, отфильтрованном по конкретному киту
-        // (см. renderPlayers, ветка targetKit !== 'all'/'sub-all').
-        const modalPenaltyTotal = document.getElementById('modalPenaltyTotal');
-        if (modalPenaltyTotal) {
-            modalPenaltyTotal.style.display = 'none';
+            roleContainer.innerHTML = isTester(player.name) ? `<span class="custom-role-badge">Tester</span>` : '';
         }
 
         const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
         const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
-        const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
-        const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
-        
+
         const mainRows = document.getElementById('modalMainRows');
-        if (mainRows) {
-            mainRows.innerHTML = activeMaintiers.map(kit => {
-                const t = getCleanTier(player, kit);
-                const iconSrc = activeKitImages[kit] || "";
-                const ret = isKitRetired(player, kit);
-                return `<div class="modal-row" style="${ret ? 'opacity:0.6;' : ''}">
-                    <div class="modal-kit-left">
-                        <img class="modal-kit-icon" src="${iconSrc}" onerror="this.style.opacity='0'" alt="">
-                        <span class="m-kit">${kit}</span>
-                    </div>
-                    <div class="m-right-side">
-                        ${getTierBadge(t, ret)} 
-                        <span class="m-pts-box">(${activePts[t] || 0} PTS)</span>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-        
+        if (mainRows) mainRows.innerHTML = activeMaintiers.map(kit => buildKitRowHTML(player, kit)).join('');
+
         const subRows = document.getElementById('modalSubRows');
-        if (subRows) {
-            subRows.innerHTML = activeSubtiers.map(kit => {
-                const t = getCleanTier(player, kit);
-                const iconSrc = activeKitImages[kit] || "";
-                const ret = isKitRetired(player, kit);
-                return `<div class="modal-row" style="${ret ? 'opacity:0.6;' : ''}">
-                    <div class="modal-kit-left">
-                        <img class="modal-kit-icon" src="${iconSrc}" onerror="this.style.opacity='0'" alt="">
-                        <span class="m-kit">${kit}</span>
-                    </div>
-                    <div class="m-right-side">
-                        ${getTierBadge(t, ret)} 
-                        <span class="m-pts-box">(${activePts[t] || 0} PTS)</span>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-        
+        if (subRows) subRows.innerHTML = activeSubtiers.map(kit => buildKitRowHTML(player, kit)).join('');
+
+        const totalLabel = isAverageOverallMode() ? 'Среднее Elo' : 'Всего Elo';
         const modalMainTotal = document.getElementById('modalMainTotal');
-        if (modalMainTotal) modalMainTotal.innerText = `Всего за Main: ${calcPoints(player, activeMaintiers)} PTS`;
-        
+        if (modalMainTotal) modalMainTotal.innerText = `${totalLabel} за Main: ${calcOverallElo(player, activeMaintiers)}`;
+
         const modalSubTotal = document.getElementById('modalSubTotal');
-        if (modalSubTotal) modalSubTotal.innerText = `Всего за Sub: ${calcPoints(player, activeSubtiers)} PTS`;
+        if (modalSubTotal) modalSubTotal.innerText = `${totalLabel} за Sub: ${calcOverallElo(player, activeSubtiers)}`;
 
         const modalDuelsRows = document.getElementById('modalDuelsRows');
         if (modalDuelsRows) {
             modalDuelsRows.innerHTML = renderDuelsList(player.matchHistory, { showKit: true });
         }
-        
+
         const profileModal = document.getElementById('profileModal');
         if (profileModal) profileModal.classList.add('active');
     } catch (e) {
@@ -420,16 +287,11 @@ function renderPlayers() {
     const list = document.getElementById('playersList');
     if (!list) return;
 
-    // Безопасное получение значений элементов
     const searchInput = document.getElementById('searchInput');
     const search = searchInput ? searchInput.value.toLowerCase() : '';
-    
     const region = window.currentRegionFilter || 'all';
-    
     const targetKit = window.currentKitFilter || 'all';
-    
-    const retiredToggle = document.getElementById('retiredToggle');
-    const showRetiredInPlace = retiredToggle ? retiredToggle.checked : false;
+    const isOverall = (targetKit === 'all' || targetKit === 'sub-all');
 
     if (typeof players === 'undefined' || !Array.isArray(players)) {
         list.innerHTML = '<div style="text-align:center;color:#ffcc47;padding:40px;">Загрузка базы данных игроков...</div>';
@@ -437,272 +299,171 @@ function renderPlayers() {
     }
 
     const subtitleEl = document.getElementById('tableSubtitle');
-
-    if (targetKit === 'all') {
-        if (subtitleEl) subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
-    } else if (targetKit === 'sub-all') {
-        if (subtitleEl) subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
-    } else {
-        if (subtitleEl) subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
+    if (subtitleEl) {
+        if (targetKit === 'all') subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
+        else if (targetKit === 'sub-all') subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
+        else subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
     }
 
     const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
-
     const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
     const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const overallKits = (targetKit === 'sub-all') ? activeSubtiers : activeMaintiers;
 
+    // В топ попадают только игроки, у которых есть рейтинг в выбранном ките
+    // (или хотя бы в одном ките выбранной группы Main/Sub).
     let filtered = players.filter(player => {
-        const matchesSearch = player.name.toLowerCase().includes(search);
+        const matchesSearch = (player.name || '').toLowerCase().includes(search);
         const matchesRegion = (region === 'all' || player.region === region);
-        
-        if (targetKit !== 'all' && targetKit !== 'sub-all') {
-            const tier = getCleanTier(player, targetKit);
-            const ret = isKitRetired(player, targetKit);
-            if (!showRetiredInPlace && ret) {
-                return false;
-            }
-            return matchesSearch && matchesRegion && tier !== "Unranked";
-        }
-        
-        if (!showRetiredInPlace && hasAnyRetiredKit(player)) {
-            return false;
-        }
-        
-        return matchesSearch && matchesRegion;
+        if (!matchesSearch || !matchesRegion) return false;
+
+        if (!isOverall) return getCleanTier(player, targetKit) !== 'Unranked';
+        return overallKits.some(kit => getCleanTier(player, kit) !== 'Unranked');
     });
 
-    if (targetKit === 'all') {
-        filtered.sort((a, b) => {
-            return calcPoints(b, activeMaintiers) - calcPoints(a, activeMaintiers);
-        });
-    } else if (targetKit === 'sub-all') {
-        filtered.sort((a, b) => {
-            return calcPoints(b, activeSubtiers) - calcPoints(a, activeSubtiers);
-        });
+    if (isOverall) {
+        filtered.sort((a, b) =>
+            (calcOverallElo(b, overallKits) - calcOverallElo(a, overallKits)) || a.name.localeCompare(b.name));
     } else {
-        filtered.sort((a, b) => {
-            const tierA = getCleanTier(a, targetKit);
-            const tierB = getCleanTier(b, targetKit);
-            return (activePts[tierB] || 0) - (activePts[tierA] || 0);
-        });
+        const eloOf = (p) => getEffectiveElo(getKitRating(p, targetKit)) || 0;
+        filtered.sort((a, b) => (eloOf(b) - eloOf(a)) || a.name.localeCompare(b.name));
     }
 
     list.innerHTML = '';
-    
+
     if (filtered.length === 0) {
         list.innerHTML = '<div style="text-align:center;color:#8892b0;padding:20px;">Игроки не найдены</div>';
         return;
     }
 
-    const filteredJSON = encodeURIComponent(JSON.stringify(filtered));
     let htmlFragment = '';
 
     filtered.forEach((player, index) => {
-        let rightColumnContent = '';
-        let rankPrefix = `#${index + 1}`; 
+        const rankPrefix = `#${index + 1}`;
+        const nameHTML = escapeHTML(player.name);
+        const regionHTML = player.region ? `<span class="player-meta-tag">${escapeHTML(player.region)}</span>` : '';
+
         let topClass = '';
-        
-        if (index === 0) topClass = 'top-rank-1';
-        else if (index === 1) topClass = 'top-rank-2';
-        else if (index === 2) topClass = 'top-rank-3';
-        else if (index === 3) topClass = 'top-rank-4';
-        else if (index === 4) topClass = 'top-rank-5';
-        
-        let isRet = false;
-        if (targetKit !== 'all' && targetKit !== 'sub-all' && isKitRetired(player, targetKit)) {
-            isRet = true;
-        } else if ((targetKit === 'all' || targetKit === 'sub-all') && hasAnyRetiredKit(player)) {
-            isRet = true;
-        }
-        
-        if (isRet) {
-            topClass = topClass ? topClass + ' retired-status' : 'retired-status';
-        }
-        
-        let bustCardData = null; // Заполняется только для карточки топа по конкретному киту (новый макет со скином)
+        if (index < 5) topClass = `top-rank-${index + 1}`;
 
-        if (targetKit === 'all') {
-            const mainPts = calcPoints(player, activeMaintiers);
-            rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${mainPts} PTS</span>`;
-        } else if (targetKit === 'sub-all') {
-            const subPts = calcPoints(player, activeSubtiers);
-            rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${subPts} PTS</span>`;
-        } else {
-            const currentTier = getCleanTier(player, targetKit);
-            const ret = isKitRetired(player, targetKit);
-            const kitPenalty = getEffectivePenalty(player, targetKit);
-            // Иконка кита и PTS убраны из этого вида по требованию - тир
-            // уже понятен по цвету и подписи badge, а PTS дублировал
-            // информацию, доступную в профиле. Штрафные очки теперь
-            // выводятся отдельным элементом рядом с рангом (см. bustCardData).
-            bustCardData = { currentTier, ret, kitPenalty };
-        }
-
-
-        let quickTiersHTML = '';
-        if (targetKit === 'all' || targetKit === 'sub-all') {
-            const kitsForRow = (targetKit === 'sub-all') ? activeSubtiers : activeMaintiers;
-            let playerKitsObjects = kitsForRow.map(kit => {
-                const tier = getCleanTier(player, kit);
-                const ret = isKitRetired(player, kit);
-                
-                let sortWeight = -1000;
-                if (tier !== "Unranked") {
-                    const pts = activePts[tier] || 0;
-                    if (!ret) {
-                        sortWeight = pts;
-                    } else {
-                        sortWeight = pts - 5000;
-                    }
-                } else {
-                    sortWeight = -10000;
-                }
-                
-                return { kit, tier, ret, sortWeight };
-            });
-
-            playerKitsObjects.sort((a, b) => b.sortWeight - a.sortWeight);
-
-            quickTiersHTML = `<div class="player-tiers-row">`;
-            playerKitsObjects.forEach(item => {
-                const kit = item.kit;
-                const tier = item.tier;
-                const ret = item.ret;
-                const clr = activeColors[tier] || '#444b66';
-                const iconSrc = activeKitImages[kit] || "";
-                const labelText = (ret && tier !== "Unranked") ? `R${tier}` : tier;
-                
-                if (tier !== "Unranked") {
-                    if (!showRetiredInPlace && ret) {
-                        quickTiersHTML += `
-                        <div class="tier-item-box" style="opacity: 0.25;">
-                            <div class="tier-icon-circle unranked">
-                                <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                            </div>
-                            <div class="tier-label-under" style="color: #444b66;">-</div>
-                        </div>`;
-                    } else {
-                        quickTiersHTML += `
-                        <div class="tier-item-box" style="${ret ? 'opacity:0.4;' : ''}">
-                            <div class="tier-icon-circle" style="border-color: ${clr}cc; box-shadow: 0 0 6px ${clr}22;">
-                                <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                            </div>
-                            <div class="tier-label-under" style="color: ${clr};">${labelText}</div>
-                        </div>`;
-                    }
-                } else {
-                    quickTiersHTML += `
-                    <div class="tier-item-box">
-                        <div class="tier-icon-circle unranked">
-                            <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                        </div>
-                        <div class="tier-label-under" style="color: #444b66;">-</div>
-                    </div>`;
-                }
-            });
-            quickTiersHTML += `</div>`;
-        }
-
-        let displayProfileRetiredTag = hasAnyRetiredKit(player);
-
-        // Формирование тегов мета-информации для карточки игрока
-        let metaTagsHTML = '';
-        if (player.region) {
-            metaTagsHTML += `<span class="player-meta-tag">${player.region}</span>`;
-        }
-        
-        // В топе по конкретному киту тир уже показан крупным badge справа
-        // (см. rightColumnContent выше) - здесь его не дублируем, чтобы
-        // не показывать один и тот же тир дважды на одной карточке.
-        if (targetKit === 'all' || targetKit === 'sub-all') {
-            const avgTier = calcAverageTier(player);
-            if (avgTier !== "Unranked") {
-                metaTagsHTML += getMetaTierTag(avgTier, displayProfileRetiredTag);
-            }
-        }
-
-        if (bustCardData) {
-            // Новый макет карточки для топа по конкретному киту: скин
-            // игрока (голова + плечи) слева на всю высоту карточки,
-            // справа сверху ранг в топе + ник, ниже одной строкой -
-            // регион, тир по этому киту и штрафные очки (если есть).
-            // Пока у всех игроков один и тот же дефолтный скин-заглушка -
-            // индивидуальные скины планируются позже отдельной системой.
-            const penaltyHTML = bustCardData.kitPenalty > 0
-                ? `<span class="bust-penalty-badge" title="Штрафные очки по этому киту">⚠ ${bustCardData.kitPenalty}</span>`
-                : '';
-            const regionHTML = player.region
-                ? `<span class="player-meta-tag">${player.region}</span>`
-                : '';
-
+        // Карточка топа по конкретному киту: скин слева, справа ранг в топе,
+        // ник, ниже - регион, ранг на ките и Elo.
+        if (!isOverall) {
+            const rating = getKitRating(player, targetKit);
             htmlFragment += `
             <div class="player-container player-container-bust ${topClass}">
-                <div class="player-card-row player-card-row-bust" onclick="openProfile(${index}, '${filteredJSON}')">
+                <div class="player-card-row player-card-row-bust" ${profileOnClick(player.name)}>
                     <img class="bust-card-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
 
                     <div class="bust-card-info">
                         <div class="bust-card-top">
                             <span class="player-rank">${rankPrefix}</span>
-                            <span class="player-name">${player.name}</span>
+                            <span class="player-name">${nameHTML}</span>
                         </div>
                         <div class="bust-card-bottom">
                             ${regionHTML}
-                            ${getTierBadge(bustCardData.currentTier, bustCardData.ret)}
-                            ${penaltyHTML}
+                            ${getTierBadge(rating.tier)}
+                            <span class="bust-elo-badge" title="Elo на этом ките">${formatElo(rating)} Elo</span>
                         </div>
                     </div>
                 </div>
             </div>`;
-        } else {
-            htmlFragment += `
-            <div class="player-container ${topClass}">
-                <div class="player-card-row" onclick="openProfile(${index}, '${filteredJSON}')">
-                    
-                    <div class="player-name-block">
-                        <span class="player-rank">${rankPrefix}</span>
-                        <span class="player-name">${player.name}</span>
-                    </div>
-
-                    <div class="player-center-block">
-                        <div class="player-meta-box">
-                            ${metaTagsHTML}
-                        </div>
-                        ${quickTiersHTML}
-                    </div>
-
-                    <div class="player-right">
-                        ${rightColumnContent}
-                    </div>
-
-                </div>
-            </div>`;
+            return;
         }
+
+        // Общий топ (Main/Sub): ряд китов с рангами + Elo справа
+        const totalElo = calcOverallElo(player, overallKits);
+        const rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${totalElo} Elo</span>`;
+
+        const kitItems = overallKits.map(kit => {
+            const rating = getKitRating(player, kit);
+            const elo = getEffectiveElo(rating);
+            return { kit, tier: rating.tier, sortWeight: elo === null ? -1 : elo };
+        });
+        kitItems.sort((a, b) => b.sortWeight - a.sortWeight);
+
+        let quickTiersHTML = `<div class="player-tiers-row">`;
+        kitItems.forEach(item => {
+            const iconSrc = activeKitImages[item.kit] || "";
+            if (item.tier !== "Unranked") {
+                const clr = tierColorOf(item.tier, '#444b66');
+                quickTiersHTML += `
+                <div class="tier-item-box">
+                    <div class="tier-icon-circle" style="border-color: ${clr}cc; box-shadow: 0 0 6px ${clr}22;">
+                        <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
+                    </div>
+                    <div class="tier-label-under" style="color: ${clr};">${item.tier}</div>
+                </div>`;
+            } else {
+                quickTiersHTML += `
+                <div class="tier-item-box">
+                    <div class="tier-icon-circle unranked">
+                        <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
+                    </div>
+                    <div class="tier-label-under" style="color: #444b66;">-</div>
+                </div>`;
+            }
+        });
+        quickTiersHTML += `</div>`;
+
+        let metaTagsHTML = regionHTML;
+        const avgTier = calcAverageTier(player);
+        if (avgTier !== "Unranked") {
+            metaTagsHTML += getMetaTierTag(avgTier);
+        }
+
+        htmlFragment += `
+        <div class="player-container ${topClass}">
+            <div class="player-card-row" ${profileOnClick(player.name)}>
+
+                <div class="player-name-block">
+                    <span class="player-rank">${rankPrefix}</span>
+                    <span class="player-name">${nameHTML}</span>
+                </div>
+
+                <div class="player-center-block">
+                    <div class="player-meta-box">
+                        ${metaTagsHTML}
+                    </div>
+                    ${quickTiersHTML}
+                </div>
+
+                <div class="player-right">
+                    ${rightColumnContent}
+                </div>
+
+            </div>
+        </div>`;
     });
-    
+
     list.innerHTML = htmlFragment;
 }
 
 // ==========================================
-// 5. ИНФОРМАЦИОННЫЙ ЦЕНТР И FAQ
+// 5. ИНФОРМАЦИОННЫЙ ЦЕНТР
 // ==========================================
 
-// Автоматическая сборка таблицы начисления PTS
-function buildFaqTable() {
-    const tbody = document.getElementById('faqTableBody');
-    if (!tbody) return;
-    const order = ['HT1', 'LT1', 'HT2', 'LT2', 'HT3', 'LT3', 'HT4', 'LT4', 'HT5', 'LT5', 'Unranked'];
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
-    
-    tbody.innerHTML = order.map(tier => {
-        const color = activeColors[tier] || '#fff';
-        return `<tr>
-            <td><span class="tier-badge" style="color: ${color}; border: 1px solid ${color}44; background:${color}11;">${tier}</span></td>
-            <td><span style="color: var(--accent); font-weight:bold;">${activePts[tier] || 0} PTS</span></td>
-        </tr>`;
-    }).join('');
+// Таблица рангов: ранг, диапазон Elo, K-фактор (собирается из config.js)
+function buildEloTable() {
+    const tbody = document.getElementById('eloTableBody');
+    if (tbody) {
+        tbody.innerHTML = ELO_TIERS.map((t, i) => {
+            const upper = i === 0 ? null : ELO_TIERS[i - 1].min - 1;
+            const range = upper === null ? `${t.min}+` : `${t.min}–${upper}`;
+            return `<tr>
+                <td>${getTierBadge(t.tier)}</td>
+                <td><span style="color: var(--accent); font-weight:bold;">${range}</span></td>
+                <td>${t.k}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    const modeText = document.getElementById('overallModeText');
+    if (modeText) {
+        modeText.textContent = isAverageOverallMode()
+            ? 'Место в общем топе (Main Kits и Sub Kits) определяется средним Elo по китам соответствующей группы, на которых вы играли.'
+            : 'Место в общем топе (Main Kits и Sub Kits) определяется суммой Elo по китам соответствующей группы, на которых вы играли.';
+    }
 }
 
 // ==========================================
@@ -733,7 +494,6 @@ function switchTab(tabId) {
         if (tabId === 'testingTab') resetHubGrid('testingHubGrid');
         if (tabId === 'otherInfoTab') resetHubGrid('otherInfoHubGrid');
         if (tabId === 'duelsTab') renderGlobalDuels();
-        if (tabId === 'homePage') renderHome();
     }
     window.scrollTo(0, 0);
 }
@@ -742,198 +502,8 @@ function backHome() {
     switchTab('mainPage');
 }
 
-
 // ==========================================
-// НОВАЯ ГЛАВНАЯ СТРАНИЦА (вкладка homePage)
-// Все числа, топ и дуэли считаются из players и config.js - ничего не выдумано.
-// ==========================================
-
-// Цвета карточек режимов на главной
-const HOME_MODE_COLORS = {
-    "Overall": "#D4AF37",
-    "Hardcore": "#d10100",
-    "Combo": "#38c984",
-    "Emerald Pot": "#e01976",
-    "RVM": "#520e0f",
-    "Emerald": "#2bdc94",
-    "Beast": "#38ada7",
-    "Manhunt": "#eb731d",
-    "SMP": "#585858",
-    "Gapple": "#f1c332",
-    "Mace": "#7f24e3",
-    "Crystal": "#54318f",
-    "Pickaxe": "#333037",
-    "Diamond Pot": "#c83231",
-    "Dragonhide": "#1e517e",
-    "Vanilla": "#3d4b96"
-};
-
-// Иконки режима Overall в проекте нет - рисуем простой SVG-кубок
-const HOME_OVERALL_ICON = `<svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true" style="shape-rendering:crispEdges">
-<path d="M6 3h12v2h3v4a4 4 0 0 1-4 4h-.5A5.5 5.5 0 0 1 13 15.9V18h3v3H8v-3h3v-2.1A5.5 5.5 0 0 1 7.5 13H7a4 4 0 0 1-4-4V5h3V3zm-1 4v2a2 2 0 0 0 1.4 1.9A9 9 0 0 1 6 9V7H5zm14 0h-1v2c0 .7-.1 1.3-.4 1.9A2 2 0 0 0 19 9V7z"/></svg>`;
-
-function homeEsc(s) {
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-// Русские склонения: 1 игрок, 2 игрока, 5 игроков
-function homePlural(n, one, few, many) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-    return many;
-}
-
-function homeFmt(n) {
-    return Number(n).toLocaleString('ru-RU');
-}
-
-function homeShade(hex, percent) {
-    const n = parseInt(hex.slice(1), 16);
-    const k = percent / 100;
-    const ch = v => Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k)));
-    const r = ch((n >> 16) & 255), g = ch((n >> 8) & 255), b = ch(n & 255);
-    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
-}
-
-// Тёмный или светлый текст на карточке - по яркости фона
-function homeTextOn(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-    const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-    // контраст с белым (1.05 / (L+0.05)) против контраста с тёмным #0a0e1a (L ~ 0.004)
-    const white = 1.05 / (L + 0.05), dark = (L + 0.05) / 0.054;
-    return dark > white ? '#0a0e1a' : '#ffffff';
-}
-
-// Переход на существующую страницу рейтинга с нужным китом ('all' = Main Overall)
-function openLeaderboard(kit) {
-    const value = kit || 'all';
-    window.currentKitFilter = value;
-    const label = document.getElementById('kitFilterLabel');
-    document.querySelectorAll('#kitFilterPanel .custom-select-option').forEach(opt => {
-        const on = opt.getAttribute('data-value') === value;
-        opt.classList.toggle('selected', on);
-        if (on && label) label.textContent = opt.textContent;
-    });
-    switchTab('mainPage');
-}
-
-function renderHome() {
-    const hasData = (typeof players !== 'undefined' && Array.isArray(players));
-    const mainKits = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const subKits = (typeof subtiers !== 'undefined') ? subtiers : [];
-    const allKits = [...mainKits, ...subKits];
-    const icons = (typeof kitImages !== 'undefined') ? kitImages : {};
-    const duels = hasData ? collectGlobalDuels() : [];
-
-    // --- Показатели
-    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setText('homeStatDuels', hasData ? homeFmt(duels.length) : '—');
-    setText('homeStatPlayers', hasData ? homeFmt(players.length) : '—');
-    setText('homeStatKits', homeFmt(allKits.length));
-
-    // --- Карточки режимов (Overall, затем main, затем sub)
-    const modesEl = document.getElementById('homeModes');
-    if (modesEl) {
-        const entries = [{ name: 'Overall', value: 'all' }, ...allKits.map(k => ({ name: k, value: k }))];
-        modesEl.innerHTML = entries.map(e => {
-            let playersCount = 0, duelsCount = 0;
-            if (hasData) {
-                if (e.name === 'Overall') {
-                    playersCount = players.length;
-                    duelsCount = duels.length;
-                } else {
-                    playersCount = players.filter(p => getCleanTier(p, e.name) !== 'Unranked').length;
-                    duelsCount = duels.filter(d => d.kit === e.name).length;
-                }
-            }
-            const color = HOME_MODE_COLORS[e.name] || '#3d4b96';
-            const textColor = homeTextOn(color);
-            const iconHTML = e.name === 'Overall'
-                ? HOME_OVERALL_ICON
-                : `<img src="${homeEsc(icons[e.name] || '')}" alt="" onerror="this.style.opacity='0'">`;
-            const stats = hasData
-                ? `<span>${homeFmt(playersCount)} ${homePlural(playersCount, 'игрок', 'игрока', 'игроков')}</span>
-                   <span>${homeFmt(duelsCount)} ${homePlural(duelsCount, 'поединок', 'поединка', 'поединков')}</span>`
-                : `<span>Загрузка…</span>`;
-            return `<a class="home-mode-card" href="#mainPage" data-kit="${homeEsc(e.value)}"
-                style="background: linear-gradient(145deg, ${color} 0%, ${homeShade(color, textColor === '#ffffff' ? -38 : -18)} 100%); color: ${textColor}; --mode-color: ${color};">
-                <div class="home-mode-head">
-                    <span class="home-mode-icon">${iconHTML}</span>
-                    <span class="home-mode-name">${homeEsc(e.name)}</span>
-                </div>
-                <div class="home-mode-stats">${stats}</div>
-            </a>`;
-        }).join('');
-    }
-
-    // --- Топ-5 Overall (те же правила, что в рейтинге: сумма PTS за main-киты)
-    const topEl = document.getElementById('homeTop5');
-    if (topEl) {
-        if (!hasData) {
-            topEl.innerHTML = `<p class="duels-empty">Загрузка…</p>`;
-        } else {
-            const top = [...players]
-                .sort((a, b) => calcPoints(b, mainKits) - calcPoints(a, mainKits))
-                .slice(0, 5);
-            topEl.innerHTML = top.length === 0 ? `<p class="duels-empty">Игроков пока нет.</p>` : top.map((p, i) =>
-                `<div class="home-top-row" data-player="${homeEsc(p.name)}">
-                    <span class="home-top-place home-top-place-${i + 1}">${i + 1}</span>
-                    <span class="home-top-name">${homeEsc(p.name)}</span>
-                    <span class="home-top-pts"><b>${calcPoints(p, mainKits)}</b> PTS</span>
-                </div>`).join('');
-        }
-    }
-
-    // --- Недавние поединки (оформление строк - как в существующей вкладке "Дуэли")
-    const duelsEl = document.getElementById('homeDuels');
-    if (duelsEl) {
-        if (!hasData) {
-            duelsEl.innerHTML = `<p class="duels-empty">Загрузка…</p>`;
-        } else {
-            const recent = [...duels].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 6);
-            duelsEl.innerHTML = recent.length === 0 ? `<p class="duels-empty">Дуэли не найдены.</p>` : recent.map(entry => {
-                const resultClass = entry.winner === 'player' ? 'duel-win' : 'duel-loss';
-                const commentHTML = entry.comment ? `<div class="duel-comment">${homeEsc(entry.comment)}</div>` : '';
-                return `<div class="duel-row ${resultClass}">
-                    <div class="duel-row-top">
-                        <div class="duel-kit">
-                            <img class="duel-kit-icon" src="${homeEsc(icons[entry.kit] || '')}" onerror="this.style.display='none';" alt="">
-                            <span>${homeEsc(entry.kit)}</span>
-                        </div>
-                        <span class="duel-date">${homeEsc(entry.date || '')}</span>
-                    </div>
-                    <div class="duel-row-main">
-                        <span class="duel-opponent-name" data-player="${homeEsc(entry.playerName)}">${homeEsc(entry.playerName)}</span>
-                        <span class="duel-score">${homeEsc(entry.scorePlayer)}:${homeEsc(entry.scoreOpponent)}</span>
-                        <span class="duel-opponent-name" data-player="${homeEsc(entry.opponent)}">${homeEsc(entry.opponent)}</span>
-                    </div>
-                    ${buildDuelTierChangeHTML(entry, { showUnchanged: true })}
-                    ${commentHTML}
-                </div>`;
-            }).join('');
-        }
-    }
-}
-
-// Делегирование кликов на главной: карточки режимов, строки топа, имена в дуэлях
-document.addEventListener('click', (e) => {
-    const home = document.getElementById('homePage');
-    if (!home || !home.contains(e.target)) return;
-
-    const card = e.target.closest('.home-mode-card');
-    if (card) {
-        e.preventDefault();
-        openLeaderboard(card.getAttribute('data-kit'));
-        return;
-    }
-    const who = e.target.closest('[data-player]');
-    if (who) openProfileByName(who.getAttribute('data-player'));
-});
-
-// ==========================================
-// ХАБ-КАРТОЧКИ ("Тестирование" / "Другая информация")
+// ХАБ-КАРТОЧКИ ("Как играть" / "Другая информация")
 // ==========================================
 
 // Соответствие id сетки → id заголовка и вводного текста над ней,
@@ -979,9 +549,9 @@ function openHubDetail(gridId, detailId) {
     const detail = document.getElementById(detailId);
     if (detail) detail.classList.add('active');
 
-    // PTS-таблица собирается динамически — на случай если карточку открыли впервые
-    if (detailId === 'hubPoints' && typeof buildFaqTable === 'function') {
-        buildFaqTable();
+    // Таблица рангов собирается динамически — на случай если карточку открыли впервые
+    if (detailId === 'hubElo' && typeof buildEloTable === 'function') {
+        buildEloTable();
     }
 
     window.scrollTo(0, 0);
@@ -1056,10 +626,8 @@ if (menuBtn && sidebar) {
 // Привязка обработчиков событий ввода
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
-    const retiredToggle = document.getElementById('retiredToggle');
 
     if (searchInput) searchInput.addEventListener('input', renderPlayers);
-    if (retiredToggle) retiredToggle.addEventListener('change', renderPlayers);
 
     // Универсальная инициализация кастомного выпадающего списка.
     // onChangeCallback по умолчанию renderPlayers (главная страница);
@@ -1122,22 +690,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const duelsSearchInput = document.getElementById('duelsSearchInput');
     if (duelsSearchInput) duelsSearchInput.addEventListener('input', renderGlobalDuels);
 
-    // Чекбоксы "Только квалификации" / "Только высокие результаты".
-    // Взаимоисключающие: квалификация даёт максимум LT3, поэтому вместе
-    // они всегда дали бы пустой список.
-    const duelsQualToggle = document.getElementById('duelsQualToggle');
-    const duelsHighToggle = document.getElementById('duelsHighToggle');
-    if (duelsQualToggle && duelsHighToggle) {
-        duelsQualToggle.addEventListener('change', () => {
-            if (duelsQualToggle.checked) duelsHighToggle.checked = false;
-            renderGlobalDuels();
-        });
-        duelsHighToggle.addEventListener('change', () => {
-            if (duelsHighToggle.checked) duelsQualToggle.checked = false;
-            renderGlobalDuels();
-        });
-    }
-
     // Первичный запуск отрисовки
     initSite();
 });
@@ -1181,139 +733,138 @@ function copyInviteCode() {
     });
 }
 
+
 // ==========================================
 // ДУЭЛИ (matchHistory) - используется и в профиле игрока, и во
 // вкладке "Дуэли" (глобальный список по всем игрокам)
 // ==========================================
+//
+// Формат записи matchHistory (экспорт из Elo-системы, см. export.py):
+//   { id, date, finishedAt, kit, opponent, result: 'win'|'loss',
+//     eloBefore, eloAfter, delta, endReason: 'death'|'timeout' }
+// Каждая дуэль есть в истории ОБОИХ участников (у каждого - со своей
+// стороны), id у них одинаковый. Записи старого формата (со счётом, без
+// result) не показываются.
 
-// Приводит запись matchHistory к единому виду, независимо от того, какой
-// версией бота она была записана: старые записи используют поля
-// tester/scoreTester (реликт до перехода на терминологию "Оппонент",
-// когда соперником всегда был тестер), новые - opponent/scoreOpponent.
-// Аналогично winner: старое значение "tester" равнозначно "opponent".
-function normalizeDuelEntry(entry) {
-    const opponent = entry.opponent !== undefined ? entry.opponent : entry.tester;
-    const scoreOpponent = entry.scoreOpponent !== undefined ? entry.scoreOpponent : entry.scoreTester;
-    const winner = entry.winner === 'tester' ? 'opponent' : entry.winner;
-    return { ...entry, opponent, scoreOpponent, winner };
+// Сколько последних дуэлей рисовать: список растёт с каждой дуэлью, а
+// браузеру не нужно строить тысячи карточек сразу.
+const GLOBAL_DUELS_LIMIT = 200;
+const PROFILE_DUELS_LIMIT = 100;
+
+// Ключ сортировки: точное время завершения, а если его нет - только дата
+function duelSortKey(entry) {
+    return entry.finishedAt || entry.date || '';
 }
 
-// Собирает уникальный список дуэлей со всех игроков. Каждая дуэль хранится
-// СИММЕТРИЧНО в matchHistory обоих участников (см. main.py на боте) -
-// поэтому здесь дедуплицируем по ключу (кит+дата+счёт+пара имён без учёта
-// порядка), оставляя одну запись на дуэль, показанную "от лица" игрока,
-// которого реально тестировали. Старые записи (до перехода на
-// симметричную запись) есть только у одной стороны - для них
-// дедупликация просто не найдёт пары, и они всё равно покажутся один
-// раз, что корректно.
+// Дата и время дуэли в часовом поясе зрителя
+function formatDuelTime(entry) {
+    if (entry.finishedAt) {
+        const d = new Date(entry.finishedAt);
+        if (!isNaN(d.getTime())) {
+            return d.toLocaleString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+    }
+    return entry.date || '';
+}
+
+function formatDelta(delta) {
+    if (delta > 0) return `+${delta}`;
+    if (delta < 0) return `−${Math.abs(delta)}`;
+    return '±0';
+}
+
+function isNewFormatDuel(entry) {
+    return !!entry && !!entry.opponent && (entry.result === 'win' || entry.result === 'loss');
+}
+
+// Блок "Elo до → после, изменение, ранг" для одной стороны дуэли
+function buildEloChangeHTML(eloBefore, eloAfter, delta) {
+    if (typeof eloBefore !== 'number' || typeof eloAfter !== 'number') return '';
+
+    const tierBefore = getTierByElo(eloBefore);
+    const tierAfter = getTierByElo(eloAfter);
+    const deltaClass = delta > 0 ? 'elo-up' : (delta < 0 ? 'elo-down' : 'elo-flat');
+
+    const colorAfter = tierColorOf(tierAfter, 'var(--accent)');
+    const tierHTML = (tierBefore !== tierAfter)
+        ? `<span style="color:${tierColorOf(tierBefore, 'var(--text-muted)')};">${tierBefore}</span>
+           <span class="duel-tier-arrow">→</span>
+           <span style="color:${colorAfter}; font-weight:700;">${tierAfter}</span>`
+        : `<span style="color:${colorAfter}; font-weight:700;">${tierAfter}</span>`;
+
+    return `<div class="duel-elo-change">
+        <span class="duel-elo-values">${Math.round(eloBefore)} <span class="duel-tier-arrow">→</span> ${Math.round(eloAfter)}</span>
+        <span class="duel-elo-delta ${deltaClass}">${formatDelta(delta)}</span>
+        <span class="duel-elo-tier">${tierHTML}</span>
+    </div>`;
+}
+
+function buildKitHTML(kit) {
+    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    return `<div class="duel-kit">
+        <img class="duel-kit-icon" src="${activeKitImages[kit] || ''}" onerror="this.style.display='none';" alt="">
+        <span>${escapeHTML(kit)}</span>
+    </div>`;
+}
+
+// Собирает уникальный список дуэлей со всех игроков: у каждой дуэли в
+// players.js две записи (по одной у каждого участника) - склеиваем их по id
+// в одну, где известны обе стороны.
 function collectGlobalDuels() {
     if (typeof players === 'undefined' || !Array.isArray(players)) return [];
 
-    // Собираем ВСЕ стороны всех дуэлей (обе копии - и "Игрока", и
-    // "Оппонента" из шаблона бота), группируя по уникальному ключу
-    // дуэли. Затем для каждой дуэли выбираем ОДНУ сторону для показа -
-    // ту, что соответствует "Игроку" (тестируемому).
-    //
-    // Новые записи несут явный флаг isPlayerSide (см. tier_logic.py) -
-    // по нему выбор однозначен. У старых записей (до этого поля) флага
-    // нет - для них используется запасная эвристика "тир реально
-    // менялся" (tierBefore !== tierAfter), как и раньше. У этой
-    // эвристики есть известный слепой случай - "закрепление" (тест
-    // подтвердил тот же тир), когда тир не меняется ни у одной из
-    // сторон; тогда для старой записи она не может различить стороны
-    // и оставляет первую встреченную. Это неизбежно без флага и
-    // касается только записей, сделанных до его появления.
     const byKey = new Map();
 
     players.forEach(player => {
         const history = Array.isArray(player.matchHistory) ? player.matchHistory : [];
         history.forEach(raw => {
-            if (!raw || raw.opponent === 'система' || raw.tester === 'система') return;
-            const entry = normalizeDuelEntry(raw);
-            if (!entry.opponent) return;
+            if (!isNewFormatDuel(raw)) return;
 
-            const namesKey = [player.name, entry.opponent].sort().join('|');
-            const key = `${entry.kit}|${entry.date}|${namesKey}|${[entry.scorePlayer, entry.scoreOpponent].sort().join('-')}`;
+            const key = (raw.id !== undefined && raw.id !== null)
+                ? `id:${raw.id}`
+                : `${raw.kit}|${raw.finishedAt || raw.date}|${[player.name, raw.opponent].sort().join('|')}`;
 
-            const candidate = { ...entry, playerName: player.name };
-
-            if (!byKey.has(key)) {
-                byKey.set(key, candidate);
-                return;
+            let duel = byKey.get(key);
+            if (!duel) {
+                duel = {
+                    kit: raw.kit,
+                    date: raw.date,
+                    finishedAt: raw.finishedAt || null,
+                    endReason: raw.endReason,
+                    sides: {}
+                };
+                byKey.set(key, duel);
             }
-
-            const existing = byKey.get(key);
-
-            // Если у обеих копий есть явный флаг - он и решает, без
-            // всякого угадывания по тиру.
-            if (typeof candidate.isPlayerSide === 'boolean' && typeof existing.isPlayerSide === 'boolean') {
-                if (candidate.isPlayerSide && !existing.isPlayerSide) {
-                    byKey.set(key, candidate);
-                }
-                return;
-            }
-
-            // Запасная эвристика для старых записей без флага: сторона
-            // "Игрока" - та, где тир реально менялся, включая
-            // квалификационные тесты (tierBefore пуст/Unranked, но
-            // tierAfter заполнен).
-            const candidateIsTested = candidate.tierBefore !== candidate.tierAfter && !!candidate.tierAfter;
-            const existingIsTested = existing.tierBefore !== existing.tierAfter && !!existing.tierAfter;
-
-            if (candidateIsTested && !existingIsTested) {
-                byKey.set(key, candidate);
-            }
-            // Если обе или ни одна сторона не показывают смену тира -
-            // оставляем ту, что уже есть (первая встреченная): без флага
-            // у старой записи иначе не разобрать, менять смысла нет.
+            duel.sides[player.name] = {
+                name: player.name,
+                opponent: raw.opponent,
+                result: raw.result,
+                eloBefore: raw.eloBefore,
+                eloAfter: raw.eloAfter,
+                delta: raw.delta
+            };
         });
     });
 
-    return Array.from(byKey.values());
+    return Array.from(byKey.values()).map(duel => {
+        const sides = Object.values(duel.sides);
+        const winnerSide = sides.find(s => s.result === 'win') || null;
+        const loserSide = sides.find(s => s.result === 'loss') || null;
+        return {
+            ...duel,
+            winnerName: winnerSide ? winnerSide.name : (loserSide ? loserSide.opponent : ''),
+            loserName: loserSide ? loserSide.name : (winnerSide ? winnerSide.opponent : ''),
+            winnerSide,
+            loserSide
+        };
+    });
 }
 
-// Строит HTML-блок с рангами дуэли (предыдущий → полученный), если они
-// зафиксированы в записи. В профиле игрока неизменившийся тир
-// (tierBefore === tierAfter) скрывается; во вкладке "Дуэли" блок
-// показывается всегда (opts.showUnchanged), включая случаи вроде HT4 → HT4.
-function buildDuelTierChangeHTML(entry, opts = {}) {
-    if (!entry.tierBefore || !entry.tierAfter) return '';
-    if (!opts.showUnchanged && entry.tierBefore === entry.tierAfter) return '';
-
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    const colorBefore = activeColors[entry.tierBefore] || 'var(--text-muted)';
-    const colorAfter = activeColors[entry.tierAfter] || 'var(--accent)';
-
-    return `<div class="duel-tier-change">
-        <span style="color:${colorBefore};">${entry.tierBefore}</span>
-        <span class="duel-tier-arrow">→</span>
-        <span style="color:${colorAfter}; font-weight:700;">${entry.tierAfter}</span>
-    </div>`;
-}
-
-// Тир из записи дуэли без возможного префикса R (Retired) и без пробелов.
-function cleanDuelTier(t) {
-    if (!t) return '';
-    return String(t).trim().replace(/^R(?=[HL]T)/, '');
-}
-
-// Квалификация: у игрока до дуэли не было ранга, после - первый ранг получен
-// (та же логика, что в collectGlobalDuels для "стороны Игрока").
-function isQualificationDuel(d) {
-    const before = cleanDuelTier(d.tierBefore);
-    const after = cleanDuelTier(d.tierAfter);
-    return (!before || before === 'Unranked') && !!after && after !== 'Unranked';
-}
-
-// Высокий результат: полученный тир HT3 и выше (HT3, LT2, HT2, LT1, HT1) -
-// тот же порог, что RETIRED_ELIGIBLE_TIERS.
-function isHighResultDuel(d) {
-    return RETIRED_ELIGIBLE_TIERS.includes(cleanDuelTier(d.tierAfter));
-}
-
-// Рендер вкладки "Дуэли" — применяет поиск (по игроку/оппоненту) и фильтр
-// по киту, показывает имя ОБОИХ участников в строке (в отличие от профиля,
-// где "я" подразумевается контекстом модалки).
+// Рендер вкладки "Дуэли": поиск по игроку/сопернику, фильтр по киту,
+// в строке видны оба участника и изменение Elo у каждого.
 function renderGlobalDuels() {
     const container = document.getElementById('globalDuelsList');
     if (!container) return;
@@ -1333,121 +884,106 @@ function renderGlobalDuels() {
     } else if (kitFilter !== 'all') {
         duels = duels.filter(d => d.kit === kitFilter);
     }
-    const qualToggle = document.getElementById('duelsQualToggle');
-    const highToggle = document.getElementById('duelsHighToggle');
-    if (qualToggle && qualToggle.checked) {
-        duels = duels.filter(isQualificationDuel);
-    }
-    if (highToggle && highToggle.checked) {
-        duels = duels.filter(isHighResultDuel);
-    }
+
     if (search) {
         duels = duels.filter(d =>
-            d.playerName.toLowerCase().includes(search) ||
-            String(d.opponent).toLowerCase().includes(search)
+            d.winnerName.toLowerCase().includes(search) ||
+            d.loserName.toLowerCase().includes(search)
         );
     }
 
-    duels.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    duels.sort((a, b) => duelSortKey(b).localeCompare(duelSortKey(a)));
 
     if (duels.length === 0) {
         container.innerHTML = `<p class="duels-empty">Дуэли не найдены.</p>`;
         return;
     }
 
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
-    container.innerHTML = duels.map(entry => {
-        const won = entry.winner === 'player';
-        const resultClass = won ? 'duel-win' : 'duel-loss';
-        const commentHTML = entry.comment ? `<div class="duel-comment">${entry.comment}</div>` : '';
-        const tierChangeHTML = buildDuelTierChangeHTML(entry, { showUnchanged: true });
-        const playerSafe = String(entry.playerName).replace(/'/g, "\\'");
-        const opponentSafe = String(entry.opponent).replace(/'/g, "\\'");
+    const total = duels.length;
+    const shown = duels.slice(0, GLOBAL_DUELS_LIMIT);
 
-        return `<div class="duel-row ${resultClass}">
+    const sideLine = (name, side) => `<div class="duel-elo-line">
+            <span class="duel-elo-who" ${profileOnClick(name)}>${escapeHTML(name)}</span>
+            ${side ? buildEloChangeHTML(side.eloBefore, side.eloAfter, side.delta) : ''}
+        </div>`;
+
+    let html = shown.map(d => {
+        const timeoutHTML = d.endReason === 'timeout'
+            ? `<div class="duel-note">Автопоражение: проигравший не вернулся на сервер за 3 минуты</div>`
+            : '';
+
+        return `<div class="duel-row duel-win">
             <div class="duel-row-top">
-                <div class="duel-kit">
-                    <img class="duel-kit-icon" src="${activeKitImages[entry.kit] || ''}" onerror="this.style.display='none';" alt="">
-                    <span>${entry.kit}</span>
-                </div>
-                <span class="duel-date">${entry.date || ''}</span>
+                ${buildKitHTML(d.kit)}
+                <span class="duel-date">${formatDuelTime(d)}</span>
             </div>
             <div class="duel-row-main">
-                <span class="duel-opponent-name" onclick="openProfileByName('${playerSafe}')">${entry.playerName}</span>
-                <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
-                <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
+                <span class="duel-opponent-name" ${profileOnClick(d.winnerName)}>${escapeHTML(d.winnerName)}</span>
+                <span class="duel-vs">победил</span>
+                <span class="duel-opponent-name" ${profileOnClick(d.loserName)}>${escapeHTML(d.loserName)}</span>
             </div>
-            ${tierChangeHTML}
-            ${commentHTML}
+            <div class="duel-elo-lines">
+                ${sideLine(d.winnerName, d.winnerSide)}
+                ${sideLine(d.loserName, d.loserSide)}
+            </div>
+            ${timeoutHTML}
         </div>`;
     }).join('');
+
+    if (total > shown.length) {
+        html += `<p class="duels-empty">Показаны последние ${shown.length} из ${total} дуэлей. Уточните поиск или кит, чтобы увидеть остальные.</p>`;
+    }
+    container.innerHTML = html;
 }
 
-// Одна запись дуэли -> HTML-строка. showKit=true добавляет иконку/название
-// кита (нужно во вкладке "Дуэли", где записи вперемешку по разным китам;
-// в профиле игрока кит и так виден из контекста блока Main/Sub Tiers выше,
-// но параметр всё равно поддерживается на будущее).
-function renderDuelRow(rawEntry, showKit) {
-    const entry = normalizeDuelEntry(rawEntry);
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
-    const won = entry.winner === 'player';
-    const resultClass = won ? 'duel-win' : 'duel-loss';
-    const resultLabel = won ? 'Победа' : 'Поражение';
-
-    const kitHTML = showKit
-        ? `<div class="duel-kit">
-                <img class="duel-kit-icon" src="${activeKitImages[entry.kit] || ''}" onerror="this.style.display='none';" alt="">
-                <span>${entry.kit}</span>
-           </div>`
+// Одна запись дуэли (со стороны игрока, чей профиль открыт) -> HTML-строка.
+// showKit=true добавляет иконку и название кита.
+function renderDuelRow(entry, showKit) {
+    const won = entry.result === 'win';
+    const timeoutNote = entry.endReason === 'timeout'
+        ? `<div class="duel-note">${won ? 'Соперник не вернулся на сервер за 3 минуты' : 'Автопоражение: не вернулись на сервер за 3 минуты'}</div>`
         : '';
 
-    const commentHTML = entry.comment
-        ? `<div class="duel-comment">${entry.comment}</div>`
-        : '';
-
-    const tierChangeHTML = buildDuelTierChangeHTML(entry);
-    const opponentSafe = String(entry.opponent).replace(/'/g, "\\'");
-
-    return `<div class="duel-row ${resultClass}">
+    return `<div class="duel-row ${won ? 'duel-win' : 'duel-loss'}">
         <div class="duel-row-top">
-            ${kitHTML}
-            <span class="duel-date">${entry.date || ''}</span>
+            ${showKit ? buildKitHTML(entry.kit) : ''}
+            <span class="duel-date">${formatDuelTime(entry)}</span>
         </div>
         <div class="duel-row-main">
             <span class="duel-opponent-label">против</span>
-            <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
-            <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
-            <span class="duel-result-badge">${resultLabel}</span>
+            <span class="duel-opponent-name" ${profileOnClick(entry.opponent)}>${escapeHTML(entry.opponent)}</span>
+            <span class="duel-result-badge">${won ? 'Победа' : 'Поражение'}</span>
         </div>
-        ${tierChangeHTML}
-        ${commentHTML}
+        ${buildEloChangeHTML(entry.eloBefore, entry.eloAfter, entry.delta)}
+        ${timeoutNote}
     </div>`;
 }
 
-// Список дуэлей игрока (используется в профиле). Системные записи
-// автопонижения (opponent/tester === "система") сюда не относятся - это
-// не дуэль, а служебное событие, поэтому исключаются из списка.
+// Список дуэлей игрока (профиль): новые сверху
 function renderDuelsList(matchHistory, opts = {}) {
     const showKit = !!opts.showKit;
-    const list = Array.isArray(matchHistory) ? matchHistory : [];
-    const duels = list.filter(e => e && e.opponent !== 'система' && e.tester !== 'система');
+    const list = Array.isArray(matchHistory) ? matchHistory.filter(isNewFormatDuel) : [];
 
-    if (duels.length === 0) {
+    if (list.length === 0) {
         return `<p class="duels-empty">Дуэлей пока нет.</p>`;
     }
 
-    const sorted = [...duels].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-    return sorted.map(entry => renderDuelRow(entry, showKit)).join('');
+    const sorted = [...list].sort((a, b) => duelSortKey(b).localeCompare(duelSortKey(a)));
+    const shown = sorted.slice(0, PROFILE_DUELS_LIMIT);
+    let html = shown.map(entry => renderDuelRow(entry, showKit)).join('');
+    if (sorted.length > shown.length) {
+        html += `<p class="duels-empty">Показаны последние ${shown.length} из ${sorted.length} дуэлей.</p>`;
+    }
+    return html;
 }
 
 // Запуск сайта
 function initSite() {
     renderPlayers();
-    renderHome();
 }
 
 // Хук: вызывается из index.html, когда players.js загрузился (асинхронно, после этого файла)
 window.onPlayersLoaded = function() {
     renderPlayers();
-    renderHome();
 };
+
