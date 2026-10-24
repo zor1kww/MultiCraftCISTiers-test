@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=2.0.0">
+    <link rel="stylesheet" href="css/style.css?v=2.2.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -103,6 +103,19 @@
             <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
         </div>
 
+        <div class="demo-banner" id="demoBanner" style="display:none;">Макет: игроки и данные демонстрационные</div>
+
+        <nav class="mode-switch" aria-label="Система рейтинга">
+            <a class="mode-switch-btn active" href="index.html" aria-current="page">Elo</a>
+            <a class="mode-switch-btn" href="classic.html">PTS</a>
+        </nav>
+
+        <nav class="mode-switch mode-switch-sub" aria-label="Раздел Elo">
+            <button type="button" class="mode-switch-btn active" data-elo-section="duels" aria-pressed="true" onclick="setEloSection('duels')">PvP Duels</button>
+            <button type="button" class="mode-switch-btn" data-elo-section="mini" aria-pressed="false" onclick="setEloSection('mini')">Mini-Games</button>
+        </nav>
+
+        <div id="pvpSection">
         <div class="filters">
             <input type="text" id="searchInput" placeholder="Поиск игрока...">
             
@@ -157,6 +170,13 @@
 
         <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
         <div class="players-list" id="playersList"></div>
+        </div>
+
+        <div id="miniSection" style="display:none;">
+            <h2 class="section-title">MINI-GAMES</h2>
+            <div class="mini-games-grid" id="miniGamesGrid"></div>
+            <div class="mini-game-info" id="miniGameInfo">Выберите мини-игру. Для каждой будет свой рейтинг Elo с рангами S–F.</div>
+        </div>
     </div>
 </div>
 
@@ -259,7 +279,7 @@
             </ul>
 
             <div class="info-accent-box" style="margin-top: 15px;">
-                Результат фиксируется автоматически — заявки и тестеры не нужны. Elo и ранг обновляются на сайте с небольшой задержкой.
+                Результат фиксируется автоматически — заявки и тестеры не нужны. Elo и ранг обновляются на сайте сами, обычно в течение минуты.
             </div>
         </div>
     </div>
@@ -271,7 +291,7 @@
         <div class="info-section">
             <div class="info-section-title">Основы</div>
             <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
-                <li><strong style="color: var(--text-main);">Elo ведётся отдельно по каждому киту.</strong> Новый игрок на ките начинает с <strong>1000 Elo</strong> (ранг HT5).</li>
+                <li><strong style="color: var(--text-main);">Elo ведётся отдельно по каждому киту.</strong> Новый игрок на ките начинает с <strong>1000 Elo</strong> (ранг C-).</li>
                 <li><strong style="color: var(--text-main);">Ранг не выдаётся вручную</strong> — он вычисляется из вашего Elo по таблице рангов (см. «Другая информация» → «Ранги и Elo»).</li>
                 <li><strong style="color: var(--text-main);">Ниже 0 Elo не опускается.</strong> Нельзя потерять больше, чем у вас есть: если у проигравшего осталось, например, 3 Elo, он теряет 3, а победитель получает ровно столько же.</li>
             </ul>
@@ -498,7 +518,7 @@
         <div class="info-section">
             <div class="info-section-title">Ранги и Elo</div>
             <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 12px;">
-                Ранг определяется вашим Elo на конкретном ките. Всего 15 рангов: 5 ступеней (1 — высшая, 5 — низшая), и внутри каждой три подступени — High (HT), Middle (MT) и Low (LT). Например, HT1 — самый высокий ранг, LT5 — самый низкий. Новый игрок начинает с 1000 Elo (HT5).
+                Ранг определяется вашим Elo на конкретном ките. Всего 10 рангов, от высшего к низшему: S, A+, A-, B+, B-, C+, C-, D+, D-, F. Новый игрок начинает с 1000 Elo (ранг C-).
             </p>
             <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px;" id="overallModeText"></p>
             <table class="faq-table">
@@ -508,6 +528,20 @@
             <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
                 <strong>K-фактор</strong> определяет, насколько сильно меняется Elo после дуэли: у новичков он выше, у топ-игроков ниже. Подробнее — в разделе «Как играть» → «Как считается Elo».
             </p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-section-title">Retired</div>
+            <p style="font-size: 13px; color: var(--text-main); line-height: 1.6; margin-bottom: 10px;">
+                Retired — отметка «ушёл в неактив» на конкретном ките. Карточка на этом ките затемняется, а Elo и ранг сохраняются.
+            </p>
+            <ul style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.9;">
+                <li><strong style="color: var(--text-main);">Доступен с ранга B- и выше</strong> (от 1300 Elo) и считается отдельно по каждому киту.</li>
+                <li><strong style="color: var(--text-main);">Автоматически</strong> — если на ките не было дуэлей 2 месяца.</li>
+                <li><strong style="color: var(--text-main);">По желанию</strong> — командой в игровом чате: <code>retire Beast</code>. Выйти из Retired — <code>unretire Beast</code>.</li>
+                <li><strong style="color: var(--text-main);">Ограничение:</strong> входить в Retired и выходить из него можно не чаще одного раза в неделю.</li>
+                <li>Первая же дуэль на ките снимает Retired. На средний общий ранг статус не влияет.</li>
+            </ul>
         </div>
     </div>
 
@@ -858,17 +892,17 @@
                 Средний общий ранг показывает общий уровень игрока по всем китам сразу — и основным (main), и дополнительным (sub). Он считается автоматически и обновляется после каждой дуэли.
             </p>
             <div class="info-accent-box">
-                <strong>Как считается:</strong> берётся среднее Elo по всем китам, на которых у вас есть рейтинг (киты, на которых вы ещё не играли, не учитываются), и по этому значению определяется ранг по общей таблице — с учётом подступеней HT, MT и LT.
+                <strong>Как считается:</strong> берётся среднее Elo по всем китам, на которых у вас есть рейтинг (киты, на которых вы ещё не играли, не учитываются), и по этому значению определяется ранг по общей таблице — по общей шкале рангов S–F. Ранги Retired в среднее входят как обычные.
             </div>
             <p style="font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 12px;">
-                <strong>Пример:</strong> Hardcore — 1600 Elo, Beast — 1400 Elo, Combo — 1000 Elo. Среднее: (1600 + 1400 + 1000) / 3 ≈ 1333 Elo — это ранг <strong>HT4</strong> (1250–1349).
+                <strong>Пример:</strong> Hardcore — 1600 Elo, Beast — 1400 Elo, Combo — 1000 Elo. Среднее: (1600 + 1400 + 1000) / 3 ≈ 1333 Elo — это ранг <strong>B-</strong> (1300–1449).
             </p>
         </div>
 
         <div class="info-section">
             <div class="info-section-title">Почему усредняется Elo, а не ранги</div>
             <p style="font-size: 13px; color: var(--text-muted); line-height: 1.7;">
-                Ступени рангов в Elo разной ширины (например, HT5 — всего 50 Elo, а LT1 — 150), поэтому усреднение именно Elo точнее, чем усреднение номеров рангов.
+                Ступени рангов в Elo разной ширины (например, A+ — 200 Elo, а C- — 150), поэтому усреднение именно Elo точнее, чем усреднение номеров рангов.
             </p>
         </div>
 
@@ -882,30 +916,8 @@
     </div>
 </div>
 
-<script src="js/config.js?v=2.0.0"></script>
-<script>
-function loadPlayersScript(url, callback) {
-    const script = document.createElement('script');
-    const cacheBuster = '?v=' + new Date().getTime();
-    script.src = url + cacheBuster;
-    script.onload = () => callback(true);
-    script.onerror = () => callback(false);
-    document.head.appendChild(script);
-}
-window.addEventListener('DOMContentLoaded', () => {
-    loadPlayersScript('players/players.js', (success) => {
-        if (success && typeof players !== 'undefined') {
-            if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
-        } else {
-            loadPlayersScript('players.js', (successRoot) => {
-                if (successRoot && typeof players !== 'undefined') {
-                    if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
-                }
-            });
-        }
-    });
-});
-</script>
-<script src="js/main.js?v=2.0.0"></script>
+<script src="js/config.js?v=2.3.0"></script>
+<script src="js/demo-data.js?v=2.3.0"></script>
+<script src="js/main.js?v=2.3.0"></script>
 </body>
 </html>
