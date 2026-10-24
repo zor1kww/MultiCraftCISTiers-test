@@ -1808,3 +1808,117 @@ body, html {
     color: var(--text-muted);
     font-style: italic;
 }
+
+/* Состояние загрузки данных: ошибка с кнопкой повтора */
+.load-error {
+    text-align: center;
+    padding: 40px 16px;
+    color: #ff9b9b;
+}
+
+.load-error p {
+    margin-bottom: 14px;
+}
+
+.load-retry-btn {
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.load-retry-btn:hover {
+    background: rgba(255, 204, 71, 0.12);
+}
+
+
+/* ==========================================================================
+   ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ: Beta Elo / Classic PTS
+   ========================================================================== */
+.mode-switch {
+    display: flex;
+    gap: 4px;
+    max-width: 360px;
+    margin: -8px auto 22px;
+    padding: 4px;
+    background: var(--bg-solid);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.mode-switch-btn {
+    flex: 1;
+    text-align: center;
+    padding: 11px 10px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.mode-switch-btn:hover {
+    color: var(--text-main);
+}
+
+.mode-switch-btn.active {
+    color: var(--accent);
+    background: rgba(255, 204, 71, 0.12);
+    border-color: var(--accent);
+}
+
+/* Очки PTS рядом с рангом в профиле (Classic PTS) */
+.m-pts-box {
+    margin-left: 6px;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+
+/* ==========================================
+   Elo: подраздел PvP Duels / Mini-Games
+   ========================================== */
+.mode-switch-sub { margin-top: -10px; max-width: 320px; }
+.mode-switch-btn { cursor: pointer; font-family: inherit; }
+button.mode-switch-btn { background: transparent; border: 1px solid transparent; }
+
+.demo-banner {
+    max-width: 360px; margin: 0 auto 14px; padding: 8px 12px; text-align: center;
+    font-size: 12px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 10px;
+}
+
+.mini-games-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+    max-width: 520px; margin: 0 auto 16px;
+}
+.mini-game-card {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+    padding: 14px 14px; text-align: left; cursor: pointer; font-family: inherit;
+    color: var(--text-main); background: var(--bg-solid);
+    border: 1px solid var(--border-color); border-radius: 12px;
+}
+.mini-game-card:hover { border-color: var(--accent); }
+.mini-game-card.active { border-color: var(--accent); background: rgba(255, 204, 71, .10); }
+.mini-game-name { font-size: 14px; font-weight: bold; }
+.mini-game-soon { font-size: 11px; color: var(--text-muted); }
+.mini-game-info {
+    max-width: 520px; margin: 0 auto; padding: 14px; font-size: 13px; line-height: 1.6;
+    color: var(--text-muted); text-align: center;
+    border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-solid);
+}
+
+/* ==========================================
+   Retired
+   ========================================== */
+.player-container.retired { opacity: .55; }
+.tier-item-box.is-retired { opacity: .5; }
+.retired-tag {
+    display: inline-block; padding: 2px 7px; font-size: 11px; font-weight: bold; line-height: 1.4;
+    color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;
+}
+.retired-mark { margin-left: 3px; font-size: 9px; vertical-align: super; opacity: .9; }
