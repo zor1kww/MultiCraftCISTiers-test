@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="yandex-verification" content="9fd64b1c1badb957" />
+    <title>Classic PTS — MultiCraftCISTiers</title>
+    <meta name="description" content="Архив прежних рангов игроков MultiCraft PVP по системе PTS.">
+    <meta name="keywords" content="MultiCraft PVP, лидерборд, тиры, мобильные игроки, MultiCraft, рейтинг, Hardcore, Manhunt">
+    <meta name="author" content="MultiCraftCISTiers">
+    <meta name="theme-color" content="#070b17">
+    <meta property="og:title" content="MultiCraftCISTiers — PVP Leaderboard">
+    <meta property="og:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft. Узнай свой рейтинг и соревнуйся с лучшими.">
+    <meta property="og:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
+    <meta property="og:url" content="https://zor1kww.github.io/MultiCraftCISTiers/classic.html">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MultiCraftCISTiers — PVP Leaderboard">
+    <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
+    <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
+    <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/classic.html">
+    <link rel="stylesheet" href="css/style.css?v=2.2.0">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MultiCraftCISTiers",
+        "description": "Официальный лидерборд мобильных игроков MultiCraft PVP",
+        "url": "https://zor1kww.github.io/MultiCraftCISTiers/",
+        "applicationCategory": "GamesApp",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "creator": {
+            "@type": "Organization",
+            "name": "MultiCraftCISTiers"
+        }
+    }
+    </script>
+</head>
+<body>
+
+<div class="modal-overlay" id="profileModal" onclick="closeModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div class="modal-title-box">
+                <h2 id="modalPlayerName">Игрок</h2>
+                <p id="modalPlayerMeta">RU PC</p>
+                <p id="modalPenaltyTotal" class="modal-penalty-total" style="display:none;"></p>
+                <div id="modalRoleContainer"></div>
+            </div>
+            <button class="close-modal-btn" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-grid">
+                <div class="modal-block">
+                    <h4>Main Tiers</h4>
+                    <div id="modalMainRows"></div>
+                    <div class="modal-block-footer" id="modalMainTotal">Всего за Main: 0 PTS</div>
+                </div>
+                <div class="modal-block">
+                    <h4>Sub Tiers</h4>
+                    <div id="modalSubRows"></div>
+                    <div class="modal-block-footer" id="modalSubTotal">Всего за Sub: 0 PTS</div>
+                </div>
+            </div>
+
+            <div class="modal-block modal-duels-block">
+                <h4>Дуэли</h4>
+                <div id="modalDuelsRows" class="duels-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <h3>Навигация</h3>
+    <a href="#" onclick="switchTab('mainPage')">Главная</a>
+    <a href="#" onclick="switchTab('duelsTab')">Дуэли</a>
+    <a href="index.html?tab=testingTab">Как играть</a>
+    <a href="index.html?tab=otherInfoTab">Другая информация</a>
+    <a href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
+    
+    <div class="theme-toggle-container">
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">Светлая тема</button>
+        <button class="theme-toggle-btn" id="inviteBtn" onclick="copyInviteCode()" style="margin-top: 10px;">UA75LL01</button>
+    </div>
+</div>
+
+<header class="header">
+    <div class="logo">MultiCraftCISTiers</div>
+    <div class="header-right">
+        <button class="menu-btn" id="menuBtn">Меню</button>
+    </div>
+</header>
+
+<div class="main-page" id="mainPage" style="display: block;">
+    <div class="hero">
+        <p>Архив прежних рангов СНГ PvP комьюнити MultiCraft по системе PTS. Тесты больше не проводятся, актуальный рейтинг ведётся по Elo во вкладке Beta Elo.</p>
+
+        <div class="tg-wrapper">
+            <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
+        </div>
+
+        <nav class="mode-switch" aria-label="Режим рейтинга">
+            <a class="mode-switch-btn" href="index.html">Beta Elo</a>
+            <a class="mode-switch-btn active" href="classic.html" aria-current="page">Classic PTS</a>
+        </nav>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="Поиск игрока...">
+            
+            <div class="custom-select" id="kitFilterCustom">
+                <button type="button" class="custom-select-trigger" id="kitFilterTrigger">
+                    <span id="kitFilterLabel">Main Kits</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="kitFilterPanel">
+                    <div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">Main Kits</div>
+                    <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
+                    <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
+                    <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
+                    <div class="custom-select-option" data-value="Beast">Beast</div>
+                    <div class="custom-select-option" data-value="Emerald">Emerald</div>
+                    <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
+                    <div class="custom-select-option" data-value="RVM">RVM</div>
+                    <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
+                    <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
+                    <div class="custom-select-option" data-value="SMP">SMP</div>
+                    <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
+                    <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
+                    <div class="custom-select-option" data-value="Combo">Combo</div>
+                    <div class="custom-select-option" data-value="Gapple">Gapple</div>
+                    <div class="custom-select-option" data-value="Mace">Mace</div>
+                    <div class="custom-select-option" data-value="Crystal">Crystal</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="filters-row-2">
+            <div class="custom-select" id="regionFilterCustom">
+                <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
+                    <span id="regionFilterLabel">Все регионы СНГ</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="regionFilterPanel">
+                    <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
+                    <div class="custom-select-option" data-value="RU">RU</div>
+                    <div class="custom-select-option" data-value="UA">UA</div>
+                    <div class="custom-select-option" data-value="BY">BY</div>
+                    <div class="custom-select-option" data-value="KZ">KZ</div>
+                    <div class="custom-select-option" data-value="UZ">UZ</div>
+                    <div class="custom-select-option" data-value="KG">KG</div>
+                    <div class="custom-select-option" data-value="AM">AM</div>
+                    <div class="custom-select-option" data-value="AZ">AZ</div>
+                    <div class="custom-select-option" data-value="MD">MD</div>
+                    <div class="custom-select-option" data-value="TJ">TJ</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filters-row-3">
+            <label class="checkbox-label">
+                <input type="checkbox" id="retiredToggle" checked>
+                Показывать Retired в топе (наравне по PTS)
+            </label>
+        </div>
+
+        <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
+        <div class="players-list" id="playersList"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     ВКЛАДКА "ДУЭЛИ" — глобальный лог всех дуэлей по всем игрокам
+     ============================================================ -->
+<div class="tab-content" id="duelsTab" style="display: none;">
+    <h2 class="section-title">Дуэли</h2>
+    <p class="hub-intro" id="duelsHubIntro">Все зафиксированные поединки на платформе.</p>
+
+    <div class="filters">
+        <input type="text" id="duelsSearchInput" placeholder="Поиск по игроку или оппоненту...">
+
+        <div class="custom-select" id="duelsKitFilterCustom">
+            <button type="button" class="custom-select-trigger" id="duelsKitFilterTrigger">
+                <span id="duelsKitFilterLabel">Все киты</span>
+                <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="custom-select-panel" id="duelsKitFilterPanel">
+                <div class="custom-select-option selected" data-value="all">Все киты</div>
+                <div class="custom-select-option custom-select-option-group" data-value="main-all" style="font-weight:700;">Main Kits</div>
+                <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
+                <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
+                <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
+                <div class="custom-select-option" data-value="Beast">Beast</div>
+                <div class="custom-select-option" data-value="Emerald">Emerald</div>
+                <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
+                <div class="custom-select-option" data-value="RVM">RVM</div>
+                <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
+                <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
+                <div class="custom-select-option" data-value="SMP">SMP</div>
+                <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
+                <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
+                <div class="custom-select-option" data-value="Combo">Combo</div>
+                <div class="custom-select-option" data-value="Gapple">Gapple</div>
+                <div class="custom-select-option" data-value="Mace">Mace</div>
+                <div class="custom-select-option" data-value="Crystal">Crystal</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filters-row-3" style="display:flex; flex-direction:column; align-items:flex-start; gap:12px;">
+        <label class="checkbox-label">
+            <input type="checkbox" id="duelsQualToggle">
+            Квалификации
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="duelsHighToggle">
+            Высокие Результаты
+        </label>
+    </div>
+
+    <div class="duels-list duels-list-global" id="globalDuelsList"></div>
+</div>
+
+
+<script src="js/classic-config.js?v=2.2.0"></script>
+<script>
+function loadPlayersScript(url, callback) {
+    const script = document.createElement('script');
+    const cacheBuster = '?v=' + new Date().getTime();
+    script.src = url + cacheBuster;
+    script.onload = () => callback(true);
+    script.onerror = () => callback(false);
+    document.head.appendChild(script);
+}
+window.addEventListener('DOMContentLoaded', () => {
+    loadPlayersScript('players/players.js', (success) => {
+        if (success && typeof players !== 'undefined') {
+            if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
+        } else {
+            loadPlayersScript('players.js', (successRoot) => {
+                if (successRoot && typeof players !== 'undefined') {
+                    if (typeof window.onPlayersLoaded === 'function') window.onPlayersLoaded();
+                }
+            });
+        }
+    });
+});
+</script>
+<script src="js/classic.js?v=2.2.0"></script>
+</body>
+</html>

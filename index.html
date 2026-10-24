@@ -89,92 +89,65 @@
 </div>
 
 <header class="header">
+    <button class="menu-btn menu-icon" id="menuBtn" aria-label="Меню">
+        <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M1 1h16M1 7h16M1 13h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
     <div class="logo">MultiCraftCISTiers</div>
-    <div class="header-right">
-        <button class="menu-btn" id="menuBtn">Меню</button>
-    </div>
 </header>
 
 <div class="main-page" id="mainPage" style="display: block;">
-    <div class="hero">
-        <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Сражайтесь в ранговых дуэлях, зарабатывайте Elo на каждом ките и занимайте топовые позиции.</p>
-
-        <div class="tg-wrapper">
-            <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
-        </div>
-
+    <div class="hero elo-page">
         <div class="demo-banner" id="demoBanner" style="display:none;">Макет: игроки и данные демонстрационные</div>
 
-        <nav class="mode-switch" aria-label="Система рейтинга">
-            <a class="mode-switch-btn active" href="index.html" aria-current="page">Elo</a>
-            <a class="mode-switch-btn" href="classic.html">PTS</a>
+        <nav class="sys-tabs" aria-label="Система рейтинга">
+            <a class="sys-tab active" href="index.html" aria-current="page">Elo</a>
+            <a class="sys-tab" href="classic.html">PTS</a>
         </nav>
 
-        <nav class="mode-switch mode-switch-sub" aria-label="Раздел Elo">
-            <button type="button" class="mode-switch-btn active" data-elo-section="duels" aria-pressed="true" onclick="setEloSection('duels')">PvP Duels</button>
-            <button type="button" class="mode-switch-btn" data-elo-section="mini" aria-pressed="false" onclick="setEloSection('mini')">Mini-Games</button>
-        </nav>
+        <h1 class="elo-title">Elo Leaderboard</h1>
+
+        <div class="seg-row">
+            <div class="seg" role="tablist" aria-label="Раздел Elo">
+                <button type="button" class="seg-btn active" data-elo-section="duels" aria-pressed="true" onclick="setEloSection('duels')">PvP Duels</button>
+                <button type="button" class="seg-btn" data-elo-section="mini" aria-pressed="false" onclick="setEloSection('mini')">Mini-Games</button>
+            </div>
+            <button type="button" class="search-toggle" id="searchToggle" aria-label="Поиск игрока" onclick="toggleSearch()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+
+        <div class="search-row" id="searchRow" style="display:none;">
+            <input type="text" id="searchInput" placeholder="Поиск игрока...">
+        </div>
+
+        <div class="chips" id="chipsRow" role="tablist" aria-label="Режим или кит"></div>
 
         <div id="pvpSection">
-        <div class="filters">
-            <input type="text" id="searchInput" placeholder="Поиск игрока...">
-            
-            <div class="custom-select" id="kitFilterCustom">
-                <button type="button" class="custom-select-trigger" id="kitFilterTrigger">
-                    <span id="kitFilterLabel">Main Kits</span>
-                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="custom-select-panel" id="kitFilterPanel">
-                    <div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">Main Kits</div>
-                    <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
-                    <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
-                    <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
-                    <div class="custom-select-option" data-value="Beast">Beast</div>
-                    <div class="custom-select-option" data-value="Emerald">Emerald</div>
-                    <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
-                    <div class="custom-select-option" data-value="RVM">RVM</div>
-                    <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
-                    <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
-                    <div class="custom-select-option" data-value="SMP">SMP</div>
-                    <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
-                    <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
-                    <div class="custom-select-option" data-value="Combo">Combo</div>
-                    <div class="custom-select-option" data-value="Gapple">Gapple</div>
-                    <div class="custom-select-option" data-value="Mace">Mace</div>
-                    <div class="custom-select-option" data-value="Crystal">Crystal</div>
+            <div class="filters-row-2">
+                <div class="custom-select" id="regionFilterCustom">
+                    <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
+                        <span id="regionFilterLabel">Все регионы СНГ</span>
+                        <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="custom-select-panel" id="regionFilterPanel">
+                        <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
+                        <div class="custom-select-option" data-value="RU">RU</div>
+                        <div class="custom-select-option" data-value="UA">UA</div>
+                        <div class="custom-select-option" data-value="BY">BY</div>
+                        <div class="custom-select-option" data-value="KZ">KZ</div>
+                        <div class="custom-select-option" data-value="UZ">UZ</div>
+                        <div class="custom-select-option" data-value="KG">KG</div>
+                        <div class="custom-select-option" data-value="AM">AM</div>
+                        <div class="custom-select-option" data-value="AZ">AZ</div>
+                        <div class="custom-select-option" data-value="MD">MD</div>
+                        <div class="custom-select-option" data-value="TJ">TJ</div>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="filters-row-2">
-            <div class="custom-select" id="regionFilterCustom">
-                <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
-                    <span id="regionFilterLabel">Все регионы СНГ</span>
-                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="custom-select-panel" id="regionFilterPanel">
-                    <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
-                    <div class="custom-select-option" data-value="RU">RU</div>
-                    <div class="custom-select-option" data-value="UA">UA</div>
-                    <div class="custom-select-option" data-value="BY">BY</div>
-                    <div class="custom-select-option" data-value="KZ">KZ</div>
-                    <div class="custom-select-option" data-value="UZ">UZ</div>
-                    <div class="custom-select-option" data-value="KG">KG</div>
-                    <div class="custom-select-option" data-value="AM">AM</div>
-                    <div class="custom-select-option" data-value="AZ">AZ</div>
-                    <div class="custom-select-option" data-value="MD">MD</div>
-                    <div class="custom-select-option" data-value="TJ">TJ</div>
-                </div>
-            </div>
-        </div>
-
-        <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
-        <div class="players-list" id="playersList"></div>
+            <div class="players-list" id="playersList"></div>
         </div>
 
         <div id="miniSection" style="display:none;">
-            <h2 class="section-title">MINI-GAMES</h2>
-            <div class="mini-games-grid" id="miniGamesGrid"></div>
             <div class="mini-game-info" id="miniGameInfo">Выберите мини-игру. Для каждой будет свой рейтинг Elo с рангами S–F.</div>
         </div>
     </div>
@@ -916,8 +889,8 @@
     </div>
 </div>
 
-<script src="js/config.js?v=2.3.0"></script>
-<script src="js/demo-data.js?v=2.3.0"></script>
-<script src="js/main.js?v=2.3.0"></script>
+<script src="js/config.js?v=2.5.0"></script>
+<script src="js/demo-data.js?v=2.5.0"></script>
+<script src="js/main.js?v=2.5.0"></script>
 </body>
 </html>
