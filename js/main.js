@@ -111,9 +111,10 @@ function getTierByElo(elo) {
 function getKitRating(player, kit) {
     const data = (player && player.tiers) ? player.tiers[kit] : null;
     if (data && typeof data.elo === 'number') {
-        return { elo: data.elo, tier: getTierByElo(data.elo) };
+        // retired приходит с бота отдельным флагом (по киту)
+        return { elo: data.elo, tier: getTierByElo(data.elo), retired: !!data.retired };
     }
-    return { elo: null, tier: 'Unranked' };
+    return { elo: null, tier: 'Unranked', retired: false };
 }
 
 // Хелпер: чистое название ранга игрока на ките ("Unranked", если не играл)
@@ -291,10 +292,9 @@ function closeModal() {
 // 4. ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАБЛИЦЫ
 // ==========================================
 
-// Плитка кита для общего топа: квадрат со скруглением, иконка и ранг под ней
-// ("-" и приглушённый вид, если рейтинга на ките нет)
-function ovTileHTML(player, kit, kitImagesMap) {
-    const rating = getKitRating(player, kit);
+// Плитка кита для общего топа: квадрат со скруглением, иконка и ранг под ней.
+// Retired - приглушённая плитка с буквой R, нет рейтинга - прочерк.
+function ovTileHTML(kit, rating, kitImagesMap) {
     const iconSrc = escapeHTML(kitImagesMap[kit] || '');
     if (rating.tier === 'Unranked') {
         return `<div class="ov-tile ov-tile-empty" title="${escapeHTML(kit)}">
@@ -303,10 +303,23 @@ function ovTileHTML(player, kit, kitImagesMap) {
         </div>`;
     }
     const clr = tierColorOf(rating.tier, '#444b66');
-    return `<div class="ov-tile" style="border-color: ${clr}99; background: ${clr}26;" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo">
+    const retiredMark = rating.retired ? '<sup class="ov-tile-r">R</sup>' : '';
+    return `<div class="ov-tile${rating.retired ? ' ov-tile-retired' : ''}" style="border-color: ${clr}99; background: ${clr}26;" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo${rating.retired ? ' (Retired)' : ''}">
         <img class="ov-tile-icon" src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-        <span class="ov-tile-tier" style="color: ${clr};">${rating.tier}</span>
+        <span class="ov-tile-tier" style="color: ${clr};">${rating.tier}${retiredMark}</span>
     </div>`;
+}
+
+// Порядок плиток в карточке: сначала активные ранги от лучшего к худшему,
+// затем Retired от лучшего к худшему, в конце киты без рейтинга (прочерк).
+function sortedKitRatings(player, kits) {
+    const group = (r) => r.tier === 'Unranked' ? 2 : (r.retired ? 1 : 0);
+    return kits
+        .map((kit, order) => ({ kit, rating: getKitRating(player, kit), order }))
+        .sort((a, b) =>
+            (group(a.rating) - group(b.rating)) ||
+            ((b.rating.elo || 0) - (a.rating.elo || 0)) ||
+            (a.order - b.order));
 }
 
 function renderPlayers() {
@@ -407,7 +420,8 @@ function renderPlayers() {
         const avgTierHTML = avgTier !== 'Unranked'
             ? `<span class="ov-tag" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
             : `<span class="ov-tag" style="color:#8892b0;">-</span>`;
-        const tilesHTML = overallKits.map(kit => ovTileHTML(player, kit, activeKitImages)).join('');
+        const tilesHTML = sortedKitRatings(player, overallKits)
+            .map(x => ovTileHTML(x.kit, x.rating, activeKitImages)).join('');
 
         htmlFragment += `
         <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
@@ -421,8 +435,8 @@ function renderPlayers() {
                 </div>
                 <div class="ov-elo">${totalElo} Elo</div>
                 <div class="ov-tags">
-                    <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
                     ${avgTierHTML}
+                    <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
                 </div>
                 <div class="ov-scroll" aria-label="Ранги по китам, листайте вправо">${tilesHTML}</div>
             </div>
