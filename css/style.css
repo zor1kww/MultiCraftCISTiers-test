@@ -1887,9 +1887,13 @@ body, html {
     display: flex; align-items: stretch; padding: 0; overflow: hidden; cursor: pointer;
     background: linear-gradient(90deg, rgba(70, 76, 96, .55) 0%, var(--bg-solid) 58%);
 }
-.ov-card.top-rank-1 { background: linear-gradient(90deg, rgba(196, 48, 36, .92) 0%, rgba(120, 28, 24, .55) 26%, var(--bg-solid) 62%); }
-.ov-card.top-rank-2 { background: linear-gradient(90deg, rgba(226, 165, 44, .92) 0%, rgba(140, 100, 28, .55) 26%, var(--bg-solid) 62%); }
-.ov-card.top-rank-3 { background: linear-gradient(90deg, rgba(122, 150, 204, .92) 0%, rgba(70, 90, 130, .55) 26%, var(--bg-solid) 62%); }
+/* Заливка слева по месту (цвета те же, что у рамок .top-rank-N выше):
+   1 - золото, 2 - серебро, 3 - бронза, 4 - серый, 5 - бирюзовый */
+.ov-card.top-rank-1 { background: linear-gradient(90deg, rgba(218, 165, 32, .90) 0%, rgba(218, 165, 32, .42) 28%, var(--bg-solid) 64%); }
+.ov-card.top-rank-2 { background: linear-gradient(90deg, rgba(169, 169, 169, .85) 0%, rgba(169, 169, 169, .38) 28%, var(--bg-solid) 64%); }
+.ov-card.top-rank-3 { background: linear-gradient(90deg, rgba(160, 82, 45, .90) 0%, rgba(160, 82, 45, .42) 28%, var(--bg-solid) 64%); }
+.ov-card.top-rank-4 { background: linear-gradient(90deg, rgba(128, 128, 128, .75) 0%, rgba(128, 128, 128, .32) 28%, var(--bg-solid) 64%); }
+.ov-card.top-rank-5 { background: linear-gradient(90deg, rgba(0, 128, 128, .80) 0%, rgba(0, 128, 128, .36) 28%, var(--bg-solid) 64%); }
 
 .ov-skin-wrap { flex: 0 0 104px; display: flex; align-items: flex-end; justify-content: center; }
 .ov-skin { display: block; width: 100%; height: auto; max-height: 190px; object-fit: contain; object-position: bottom; image-rendering: pixelated; }
@@ -1923,3 +1927,7 @@ body, html {
 .ov-tile-tier { font-size: 14px; font-weight: bold; line-height: 1; }
 .ov-tile-empty { border-color: var(--border-color); background: rgba(255, 255, 255, .03); opacity: .6; }
 .ov-tile-empty .ov-tile-tier { color: #6b7490; }
+
+/* Retired на плитке */
+.ov-tile-retired { opacity: .5; }
+.ov-tile-r { margin-left: 2px; font-size: 8px; color: var(--text-muted); vertical-align: super; }
