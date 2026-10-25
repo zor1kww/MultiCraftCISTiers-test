@@ -111,10 +111,9 @@ function getTierByElo(elo) {
 function getKitRating(player, kit) {
     const data = (player && player.tiers) ? player.tiers[kit] : null;
     if (data && typeof data.elo === 'number') {
-        // retired приходит с бота отдельным флагом (по киту)
-        return { elo: data.elo, tier: getTierByElo(data.elo), retired: !!data.retired };
+        return { elo: data.elo, tier: getTierByElo(data.elo) };
     }
-    return { elo: null, tier: 'Unranked', retired: false };
+    return { elo: null, tier: 'Unranked' };
 }
 
 // Хелпер: чистое название ранга игрока на ките ("Unranked", если не играл)
@@ -221,7 +220,6 @@ function buildKitRowHTML(player, kit) {
         </div>
         <div class="m-right-side">
             ${getTierBadge(rating.tier)}
-            ${rating.retired ? '<span class="retired-tag">Retired</span>' : ''}
             <span class="m-elo-box">${eloText}</span>
         </div>
     </div>`;
@@ -293,6 +291,23 @@ function closeModal() {
 // 4. ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАБЛИЦЫ
 // ==========================================
 
+// Плитка кита для общего топа: иконка в кружке и ранг под ней ("-" если рейтинга нет)
+function ovTileHTML(player, kit, kitImagesMap) {
+    const rating = getKitRating(player, kit);
+    const iconSrc = escapeHTML(kitImagesMap[kit] || '');
+    if (rating.tier === 'Unranked') {
+        return `<div class="tier-item-box ov-tile" title="${escapeHTML(kit)}">
+            <div class="tier-icon-circle unranked"><img src="${iconSrc}" onerror="this.style.opacity=0" alt=""></div>
+            <div class="tier-label-under" style="color: #444b66;">-</div>
+        </div>`;
+    }
+    const clr = tierColorOf(rating.tier, '#444b66');
+    return `<div class="tier-item-box ov-tile" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo">
+        <div class="tier-icon-circle" style="border-color: ${clr}cc; box-shadow: 0 0 6px ${clr}22;"><img src="${iconSrc}" onerror="this.style.opacity=0" alt=""></div>
+        <div class="tier-label-under" style="color: ${clr};">${rating.tier}</div>
+    </div>`;
+}
+
 function renderPlayers() {
     const list = document.getElementById('playersList');
     if (!list) return;
@@ -351,44 +366,79 @@ function renderPlayers() {
     let htmlFragment = '';
 
     filtered.forEach((player, index) => {
+        const rankPrefix = `#${index + 1}`;
         const nameHTML = escapeHTML(player.name);
-        const regionText = escapeHTML(player.region || '?');
-        const topClass = index < 3 ? `rk-top-${index + 1}` : '';
+        const regionHTML = `<span class="player-meta-tag">${escapeHTML(player.region || '?')}</span>`;
 
-        let pointsText;
-        let tilesHTML;
-        let retiredClass = '';
+        let topClass = '';
+        if (index < 5) topClass = `top-rank-${index + 1}`;
 
-        if (isOverall) {
-            // Общий топ: сумма (или среднее) Elo по выбранной группе китов и плитки по китам
-            pointsText = `${calcOverallElo(player, overallKits)} Elo`;
-            const ranked = overallKits
-                .map(kit => ({ kit, rating: getKitRating(player, kit) }))
-                .filter(x => x.rating.elo !== null)
-                .sort((a, b) => b.rating.elo - a.rating.elo);
-            tilesHTML = ranked.map(x => rankTileHTML(x.kit, x.rating)).join('');
-        } else {
-            // Топ по одному киту: Elo и ранг на ките
+        // Карточка топа по конкретному киту: скин слева, справа ранг в топе,
+        // ник, ниже - регион, ранг на ките и Elo.
+        if (!isOverall) {
             const rating = getKitRating(player, targetKit);
-            pointsText = `${formatElo(rating)} Elo`;
-            tilesHTML = rating.elo !== null ? rankTileHTML(targetKit, rating) : '';
-            if (rating.retired) retiredClass = ' pcard-retired';
+            htmlFragment += `
+            <div class="player-container player-container-bust ${topClass}">
+                <div class="player-card-row player-card-row-bust" ${profileOnClick(player.name)}>
+                    <img class="bust-card-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+
+                    <div class="bust-card-info">
+                        <div class="bust-card-top">
+                            <span class="player-rank">${rankPrefix}</span>
+                            <span class="player-name">${nameHTML}</span>
+                        </div>
+                        <div class="bust-card-bottom">
+                            ${regionHTML}
+                            ${getTierBadge(rating.tier)}
+                            <span class="bust-elo-badge" title="Elo на этом ките">${formatElo(rating)} Elo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            return;
         }
 
+        // Общий топ (Main/Sub): шапка (скин, место, ник, регион, средний ранг),
+        // ниже иконки рангов (Main - два ряда, Sub - один ряд) и общее Elo.
+        const totalElo = calcOverallElo(player, overallKits);
+        const avgTier = calcAverageTier(player);
+        const avgTierHTML = avgTier !== 'Unranked'
+            ? `<span class="ov-tag ov-tag-tier" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
+            : `<span class="ov-tag ov-tag-tier" style="color:#8892b0;">-</span>`;
+
+        const mainHalf = Math.ceil(activeMaintiers.length / 2);   // Main: два ряда
+        const mainRow1 = activeMaintiers.slice(0, mainHalf);
+        const mainRow2 = activeMaintiers.slice(mainHalf);
+
+        const tileRow = (kits, extraClass) =>
+            `<div class="ov-grid ${extraClass}">${kits.map(kit => ovTileHTML(player, kit, activeKitImages)).join('')}</div>`;
+
         htmlFragment += `
-        <div class="pc${retiredClass}" ${profileOnClick(player.name)}>
-            <div class="pc-top">
-                <div class="pc-left ${topClass}">
-                    <span class="pc-place">${index + 1}</span>
-                    <img class="pc-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+        <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
+            <div class="ov-head">
+                <img class="bust-card-skin ov-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+                <div class="ov-head-text">
+                    <div class="ov-title">
+                        <span class="player-rank">${rankPrefix}</span>
+                        <span class="player-name">${nameHTML}</span>
+                    </div>
+                    <div class="ov-tags">
+                        <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
+                        ${avgTierHTML}
+                    </div>
                 </div>
-                <div class="pc-info">
-                    <div class="pc-name">${nameHTML}</div>
-                    <div class="pc-points">${pointsText}</div>
-                </div>
-                <span class="pc-region" style="${regionStyle(player.region)}">${regionText}</span>
             </div>
-            <div class="pc-tiles">${tilesHTML}</div>
+
+            <div class="ov-rows">
+                ${tileRow(mainRow1, 'ov-grid-main')}
+                ${tileRow(mainRow2, 'ov-grid-main')}
+                ${tileRow(activeSubtiers, 'ov-grid-sub')}
+            </div>
+
+            <div class="ov-total">
+                <div class="ov-total-line"></div>
+                <div class="ov-total-text">Общее Elo \u2014 <strong>${totalElo}</strong></div>
+            </div>
         </div>`;
     });
 
@@ -634,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Фильтр китов (Main/Sub Overall)
+    initCustomDropdown('kitFilter', 'currentKitFilter', 'all');
 
     // Фильтр региона
     initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
@@ -1058,122 +1109,9 @@ function startPlayersAutoRefresh() {
     });
 }
 
-// ==========================================
-// РАЗДЕЛЫ ELO: PvP Duels / Mini-Games и чипы под ними
-// ==========================================
-
-window.eloSection = 'duels';
-window.currentKitFilter = 'all';
-window.currentMiniGame = null;
-
-function chipHTML(value, label, iconSrc, active, handler) {
-    const icon = iconSrc ? `<img src="${escapeHTML(iconSrc)}" onerror="this.style.display='none'" alt="">` : '';
-    return `<button type="button" class="chip${active ? ' active' : ''}" data-v="${escapeHTML(value)}" onclick="${handler}">${icon}<span>${escapeHTML(label)}</span></button>`;
-}
-
-// Чипы: в PvP - Overall, Sub Overall и киты; в Mini-Games - мини-игры
-function renderChips() {
-    const row = document.getElementById('chipsRow');
-    if (!row) return;
-    if (window.eloSection === 'mini') {
-        const games = (typeof miniGames !== 'undefined') ? miniGames : [];
-        row.innerHTML = games.map(name =>
-            chipHTML(name, name, '', window.currentMiniGame === name, 'selectMiniGame(this.dataset.v)')).join('');
-        return;
-    }
-    const kits = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const subs = (typeof subtiers !== 'undefined') ? subtiers : [];
-    const images = (typeof kitImages !== 'undefined') ? kitImages : {};
-    const active = window.currentKitFilter || 'all';
-    let html = `<button type="button" class="chip${active === 'all' ? ' active' : ''}" data-v="all" onclick="setKitFilter(this.dataset.v)">
-        <svg class="chip-trophy" width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" fill="currentColor"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Overall</span></button>`;
-    html += chipHTML('sub-all', 'Sub Overall', '', active === 'sub-all', 'setKitFilter(this.dataset.v)');
-    kits.concat(subs).forEach(kit => {
-        html += chipHTML(kit, kit, images[kit], active === kit, 'setKitFilter(this.dataset.v)');
-    });
-    row.innerHTML = html;
-}
-
-function setKitFilter(value) {
-    window.currentKitFilter = value;
-    renderChips();
-    renderPlayers();
-}
-
-// Переключает раздел Elo без перезагрузки страницы
-function setEloSection(section) {
-    window.eloSection = (section === 'mini') ? 'mini' : 'duels';
-    const isMini = window.eloSection === 'mini';
-    document.querySelectorAll('[data-elo-section]').forEach(btn => {
-        const active = btn.getAttribute('data-elo-section') === window.eloSection;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
-    const pvp = document.getElementById('pvpSection');
-    const mini = document.getElementById('miniSection');
-    if (pvp) pvp.style.display = isMini ? 'none' : '';
-    if (mini) mini.style.display = isMini ? '' : 'none';
-    renderChips();
-    if (!isMini) renderPlayers();
-    else if (!window.currentMiniGame) {
-        const info = document.getElementById('miniGameInfo');
-        if (info) info.textContent = 'Выберите мини-игру. Для каждой будет свой рейтинг Elo с рангами S–F.';
-    }
-}
-
-// Выбор мини-игры: пока для всех - заглушка "рейтинг скоро"
-function selectMiniGame(name) {
-    window.currentMiniGame = name;
-    const info = document.getElementById('miniGameInfo');
-    if (info) {
-        info.innerHTML = `<strong>${escapeHTML(name)}</strong><br>Рейтинг этой мини-игры появится позже. Здесь будет свой лидерборд с Elo и рангами S–F.`;
-    }
-    renderChips();
-}
-
-// Показ/скрытие поиска по нику
-function toggleSearch() {
-    const row = document.getElementById('searchRow');
-    if (!row) return;
-    const open = row.style.display === 'none';
-    row.style.display = open ? '' : 'none';
-    if (open) {
-        const input = document.getElementById('searchInput');
-        if (input) input.focus();
-    } else {
-        const input = document.getElementById('searchInput');
-        if (input) { input.value = ''; renderPlayers(); }
-    }
-}
-
-// Цвет плашки региона (рамка и текст), как у NA/EU в референсе
-const REGION_COLORS = {
-    RU: '#e5534b', UA: '#4a90e2', BY: '#3fb68b', KZ: '#2fb5c7', UZ: '#7bc043',
-    KG: '#e8683d', AM: '#e0a030', AZ: '#2f9e7a', MD: '#a06fe0', TJ: '#d0508f'
-};
-function regionStyle(region) {
-    const c = REGION_COLORS[region] || '#8892b0';
-    return `color:${c};border-color:${c}99;background:${c}1f;`;
-}
-
-// Плитка ранга на ките: иконка, ранг цветом, R у Retired
-function rankTileHTML(kit, rating) {
-    const images = (typeof kitImages !== 'undefined') ? kitImages : {};
-    const clr = tierColorOf(rating.tier, '#444b66');
-    const retired = rating.retired ? ' rk-retired' : '';
-    const title = `${escapeHTML(kit)}: ${formatElo(rating)} Elo${rating.retired ? ' (Retired)' : ''}`;
-    return `<div class="rk-tile${retired}" style="border-color: ${clr}; background: ${clr}1f;" title="${title}">
-        <img class="rk-icon" src="${escapeHTML(images[kit] || '')}" onerror="this.style.opacity=0" alt="">
-        <span class="rk-tier" style="color: ${clr};">${rating.tier}${rating.retired ? '<sup class="rk-r">R</sup>' : ''}</span>
-    </div>`;
-}
-
 // Запуск сайта (может вызываться дважды - из DOMContentLoaded и сразу,
 // если DOM уже готов; загрузка стартует один раз)
 function initSite() {
-    renderChips();
-    const banner = document.getElementById('demoBanner');
-    if (banner && typeof DEMO_MODE !== 'undefined' && DEMO_MODE) banner.style.display = '';
     renderPlayers();   // покажет "Загрузка..." до прихода данных
     if (!playersLoadStarted) {
         playersLoadStarted = true;
