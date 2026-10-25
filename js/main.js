@@ -291,20 +291,21 @@ function closeModal() {
 // 4. ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАБЛИЦЫ
 // ==========================================
 
-// Плитка кита для общего топа: иконка в кружке и ранг под ней ("-" если рейтинга нет)
+// Плитка кита для общего топа: квадрат со скруглением, иконка и ранг под ней
+// ("-" и приглушённый вид, если рейтинга на ките нет)
 function ovTileHTML(player, kit, kitImagesMap) {
     const rating = getKitRating(player, kit);
     const iconSrc = escapeHTML(kitImagesMap[kit] || '');
     if (rating.tier === 'Unranked') {
-        return `<div class="tier-item-box ov-tile" title="${escapeHTML(kit)}">
-            <div class="tier-icon-circle unranked"><img src="${iconSrc}" onerror="this.style.opacity=0" alt=""></div>
-            <div class="tier-label-under" style="color: #444b66;">-</div>
+        return `<div class="ov-tile ov-tile-empty" title="${escapeHTML(kit)}">
+            <img class="ov-tile-icon" src="${iconSrc}" onerror="this.style.opacity=0" alt="">
+            <span class="ov-tile-tier">\u2014</span>
         </div>`;
     }
     const clr = tierColorOf(rating.tier, '#444b66');
-    return `<div class="tier-item-box ov-tile" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo">
-        <div class="tier-icon-circle" style="border-color: ${clr}cc; box-shadow: 0 0 6px ${clr}22;"><img src="${iconSrc}" onerror="this.style.opacity=0" alt=""></div>
-        <div class="tier-label-under" style="color: ${clr};">${rating.tier}</div>
+    return `<div class="ov-tile" style="border-color: ${clr}99; background: ${clr}26;" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo">
+        <img class="ov-tile-icon" src="${iconSrc}" onerror="this.style.opacity=0" alt="">
+        <span class="ov-tile-tier" style="color: ${clr};">${rating.tier}</span>
     </div>`;
 }
 
@@ -398,46 +399,32 @@ function renderPlayers() {
             return;
         }
 
-        // Общий топ (Main/Sub): шапка (скин, место, ник, регион, средний ранг),
-        // ниже иконки рангов (Main - два ряда, Sub - один ряд) и общее Elo.
+        // Общий топ (Main/Sub): слева скин, справа место и ник, ниже регион и
+        // средний ранг, ниже плитки рангов открытой вкладки (Main или Sub) -
+        // их можно листать по горизонтали.
         const totalElo = calcOverallElo(player, overallKits);
         const avgTier = calcAverageTier(player);
         const avgTierHTML = avgTier !== 'Unranked'
-            ? `<span class="ov-tag ov-tag-tier" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
-            : `<span class="ov-tag ov-tag-tier" style="color:#8892b0;">-</span>`;
-
-        const mainHalf = Math.ceil(activeMaintiers.length / 2);   // Main: два ряда
-        const mainRow1 = activeMaintiers.slice(0, mainHalf);
-        const mainRow2 = activeMaintiers.slice(mainHalf);
-
-        const tileRow = (kits, extraClass) =>
-            `<div class="ov-grid ${extraClass}">${kits.map(kit => ovTileHTML(player, kit, activeKitImages)).join('')}</div>`;
+            ? `<span class="ov-tag" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
+            : `<span class="ov-tag" style="color:#8892b0;">-</span>`;
+        const tilesHTML = overallKits.map(kit => ovTileHTML(player, kit, activeKitImages)).join('');
 
         htmlFragment += `
         <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
-            <div class="ov-head">
-                <img class="bust-card-skin ov-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
-                <div class="ov-head-text">
-                    <div class="ov-title">
-                        <span class="player-rank">${rankPrefix}</span>
-                        <span class="player-name">${nameHTML}</span>
-                    </div>
-                    <div class="ov-tags">
-                        <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
-                        ${avgTierHTML}
-                    </div>
+            <div class="ov-skin-wrap">
+                <img class="ov-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+            </div>
+            <div class="ov-body">
+                <div class="ov-title">
+                    <span class="player-rank">${rankPrefix}</span>
+                    <span class="player-name">${nameHTML}</span>
                 </div>
-            </div>
-
-            <div class="ov-rows">
-                ${tileRow(mainRow1, 'ov-grid-main')}
-                ${tileRow(mainRow2, 'ov-grid-main')}
-                ${tileRow(activeSubtiers, 'ov-grid-sub')}
-            </div>
-
-            <div class="ov-total">
-                <div class="ov-total-line"></div>
-                <div class="ov-total-text">Общее Elo \u2014 <strong>${totalElo}</strong></div>
+                <div class="ov-elo">${totalElo} Elo</div>
+                <div class="ov-tags">
+                    <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
+                    ${avgTierHTML}
+                </div>
+                <div class="ov-scroll" aria-label="Ранги по китам, листайте вправо">${tilesHTML}</div>
             </div>
         </div>`;
     });
