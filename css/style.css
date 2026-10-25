@@ -1881,123 +1881,29 @@ body, html {
 
 
 /* ==========================================
-   Elo: подраздел PvP Duels / Mini-Games
+   Карточка общего топа (Main / Sub Overall)
    ========================================== */
-.mode-switch-sub { margin-top: -10px; max-width: 320px; }
-.mode-switch-btn { cursor: pointer; font-family: inherit; }
-button.mode-switch-btn { background: transparent; border: 1px solid transparent; }
-
-.demo-banner {
-    max-width: 360px; margin: 0 auto 14px; padding: 8px 12px; text-align: center;
-    font-size: 12px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: 10px;
+.ov-card { padding: 16px 14px 14px; cursor: pointer; }
+.ov-head { display: flex; align-items: center; gap: 14px; }
+.ov-skin { flex: 0 0 auto; }
+.ov-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.ov-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ov-title .player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-tags { display: flex; gap: 8px; }
+.ov-tag {
+    box-sizing: border-box; width: 68px; height: 36px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: bold; color: var(--text-muted);
+    border: 1px solid var(--border-color); border-radius: 10px; background: rgba(0, 0, 0, .22);
 }
-
-.mini-games-grid {
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-    max-width: 520px; margin: 0 auto 16px;
-}
-.mini-game-card {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-    padding: 14px 14px; text-align: left; cursor: pointer; font-family: inherit;
-    color: var(--text-main); background: var(--bg-solid);
-    border: 1px solid var(--border-color); border-radius: 12px;
-}
-.mini-game-card:hover { border-color: var(--accent); }
-.mini-game-card.active { border-color: var(--accent); background: rgba(255, 204, 71, .10); }
-.mini-game-name { font-size: 14px; font-weight: bold; }
-.mini-game-soon { font-size: 11px; color: var(--text-muted); }
-.mini-game-info {
-    max-width: 520px; margin: 0 auto; padding: 14px; font-size: 13px; line-height: 1.6;
-    color: var(--text-muted); text-align: center;
-    border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-solid);
-}
-
-/* ==========================================
-   Retired
-   ========================================== */
-.player-container.retired { opacity: .55; }
-.tier-item-box.is-retired { opacity: .5; }
-.retired-tag {
-    display: inline-block; padding: 2px 7px; font-size: 11px; font-weight: bold; line-height: 1.4;
-    color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px;
-}
-.retired-mark { margin-left: 3px; font-size: 9px; vertical-align: super; opacity: .9; }
-
-
-/* ==========================================
-   Шапка: меню слева, логотип справа от него
-   ========================================== */
-.header { display: flex; align-items: center; justify-content: flex-start; gap: 12px; }
-.menu-icon { width: 40px; height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; }
-
-/* ==========================================
-   Elo Leaderboard: заголовок, переключатели, чипы
-   ========================================== */
-.elo-page { text-align: left; }
-.elo-title { font-size: 30px; font-weight: bold; margin: 16px 0 14px; color: var(--text-main); letter-spacing: .3px; }
-.seg-row { display: flex; gap: 8px; align-items: stretch; }
-.seg { flex: 1; display: flex; padding: 4px; background: var(--bg-solid); border: 1px solid var(--border-color); border-radius: 12px; }
-.seg-btn { flex: 1; padding: 10px 8px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font: bold 14px inherit; font-family: inherit; cursor: pointer; }
-.seg-btn.active { background: rgba(255, 204, 71, .14); color: var(--accent); }
-.search-toggle { flex: 0 0 46px; width: 46px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-solid); color: var(--text-main); cursor: pointer; }
-.search-row { margin: 10px 0 4px; }
-.chips { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 12px; scrollbar-width: none; }
-.chips::-webkit-scrollbar { display: none; }
-.chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-solid); color: var(--text-muted); font: bold 13px inherit; font-family: inherit; cursor: pointer; white-space: nowrap; }
-.chip img { width: 20px; height: 20px; object-fit: contain; }
-.chip.active { color: var(--accent); border-color: var(--accent); background: rgba(255, 204, 71, .10); }
-
-/* ==========================================
-   Карточка игрока в топе (как в референсе)
-   ========================================== */
-.pcard { display: flex; align-items: stretch; margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-solid); overflow: hidden; cursor: pointer; }
-.pcard:hover { border-color: var(--accent); }
-.pcard-left { position: relative; flex: 0 0 84px; min-height: 104px; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; background: linear-gradient(90deg, #2a2d38 0%, #14161d 100%); }
-.pcard-left.rk-top-1 { background: linear-gradient(90deg, rgba(255, 204, 71, .38) 0%, rgba(20, 22, 29, 0) 100%); }
-.pcard-left.rk-top-2 { background: linear-gradient(90deg, rgba(200, 200, 210, .32) 0%, rgba(20, 22, 29, 0) 100%); }
-.pcard-left.rk-top-3 { background: linear-gradient(90deg, rgba(205, 127, 50, .36) 0%, rgba(20, 22, 29, 0) 100%); }
-.pcard-place { position: absolute; left: 12px; top: 10px; font-size: 22px; font-weight: bold; color: var(--text-main); z-index: 1; }
-.pcard-skin { height: 104px; width: auto; max-width: 84px; image-rendering: pixelated; margin-right: 2px; }
-.pcard-main { flex: 1; min-width: 0; padding: 12px 12px 12px 12px; }
-.pcard-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.pcard-name { min-width: 0; font-size: 18px; font-weight: bold; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pcard-region { flex: 0 0 auto; }
-.pcard-points { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
-.pcard-tiles { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.rk-tile { width: 56px; flex: 0 0 56px; padding: 6px 0 5px; text-align: center; border: 1.5px solid; border-radius: 10px; background: rgba(0, 0, 0, .28); }
-.rk-icon { display: block; width: 26px; height: 26px; margin: 0 auto 3px; object-fit: contain; }
-.rk-tier { font-size: 13px; font-weight: bold; }
-.rk-r { font-size: 8px; margin-left: 2px; color: var(--text-muted); }
-.rk-retired { opacity: .45; }
-.pcard-region { display: inline-block; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; font-weight: bold; color: var(--text-muted); }
-.pcard-retired { opacity: .6; }
-
-
-/* ==========================================
-   v2: карточка игрока и вкладки Elo / PTS (по референсу)
-   ========================================== */
-.sys-tabs { display: flex; gap: 22px; margin: 0 0 6px; border-bottom: 1px solid var(--border-color); }
-.sys-tab { padding: 8px 2px 10px; font-size: 15px; font-weight: bold; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.sys-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.chip-trophy { color: #ffcc47; }
-.chip.active .chip-trophy { color: var(--accent); }
-
-.pc { margin-bottom: 14px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--bg-solid); overflow: hidden; cursor: pointer; }
-.pc:hover { border-color: var(--accent); }
-.pc.pcard-retired { opacity: .6; }
-.pc-top { display: flex; align-items: center; }
-.pc-left { position: relative; flex: 0 0 150px; height: 118px; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; background: linear-gradient(100deg, #2b2e39 0%, rgba(20, 22, 29, 0) 100%); }
-.pc-left.rk-top-1 { background: linear-gradient(100deg, rgba(255, 204, 71, .45) 0%, rgba(20, 22, 29, 0) 100%); }
-.pc-left.rk-top-2 { background: linear-gradient(100deg, rgba(200, 200, 215, .38) 0%, rgba(20, 22, 29, 0) 100%); }
-.pc-left.rk-top-3 { background: linear-gradient(100deg, rgba(205, 127, 50, .42) 0%, rgba(20, 22, 29, 0) 100%); }
-.pc-place { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 40px; line-height: 1; font-weight: bold; color: var(--text-main); opacity: .92; }
-.pc-skin { height: 118px; width: auto; max-width: 96px; margin-right: 6px; image-rendering: pixelated; }
-.pc-info { flex: 1; min-width: 0; padding: 0 8px 0 4px; }
-.pc-name { font-size: 20px; font-weight: bold; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pc-points { margin-top: 4px; font-size: 16px; color: var(--text-muted); }
-.pc-region { flex: 0 0 auto; margin-right: 14px; padding: 12px 14px; font-size: 16px; font-weight: bold; border: 1.5px solid; border-radius: 10px; }
-.pc-tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 14px 14px; }
-.pc .rk-tile { width: 62px; flex: 0 0 62px; padding: 8px 0 6px; border-radius: 12px; }
-.pc .rk-icon { width: 30px; height: 30px; margin-bottom: 4px; }
-.pc .rk-tier { font-size: 15px; }
-.pc-tiles:empty { display: none; }
+.ov-rows { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.ov-grid { display: grid; gap: 6px; justify-items: center; }
+.ov-grid-main { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ov-grid-sub { grid-template-columns: repeat(6, minmax(0, 1fr)); padding-top: 6px; border-top: 1px dashed var(--border-color); }
+.ov-grid .tier-item-box { min-width: 0; }
+.ov-grid .tier-icon-circle { width: 36px; height: 36px; }
+.ov-grid .tier-icon-circle img { width: 22px; height: 22px; }
+.ov-grid .tier-label-under { font-size: 11px; }
+.ov-total { margin-top: 12px; }
+.ov-total-line { height: 1px; background: var(--border-color); margin-bottom: 10px; }
+.ov-total-text { font-size: 15px; color: var(--text-muted); }
+.ov-total-text strong { color: var(--accent); }
