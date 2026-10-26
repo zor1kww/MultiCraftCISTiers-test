@@ -172,15 +172,39 @@ function calcAverageTier(player) {
 }
 
 // Генерация HTML-бейджа ранга
-function getTierBadge(tier) {
+function getTierBadge(tier, appendR = false) {
     const color = tierColorOf(tier, '#fff');
+    if (appendR && tier !== 'Unranked') {
+        return `<span class="tier-badge" style="border: 1px solid ${color}44; background: ${color}11;">
+            <span style="color: #ff4a4a; font-weight: bold;">R</span><span style="color: ${color};">${tier}</span>
+        </span>`;
+    }
     return `<span class="tier-badge" style="color: ${color}; border: 1px solid ${color}44; background: ${color}11;">${tier}</span>`;
 }
 
 // Генерация маленького тега ранга (среднего или конкретного)
-function getMetaTierTag(tier) {
+function getMetaTierTag(tier, isRetired = false) {
     const color = tierColorOf(tier, '#8892b0');
+    if (isRetired && tier !== 'Unranked') {
+        return `
+        <span class="player-meta-tag" style="border-color: ${color}55; background: ${color}11; padding: 2px 6px;">
+            <span style="color: #ff4a4a; font-weight: bold; margin-right: 1px;">R</span><span style="color: ${color}; font-weight: bold;">${tier}</span>
+        </span>`;
+    }
     return `<span class="player-meta-tag" style="color: ${color}; border-color: ${color}55; background: ${color}11; font-weight: bold;">${tier}</span>`;
+}
+
+// Retired-статус кита (флаг приходит с бота отдельно по каждому киту)
+function isKitRetired(player, kit) {
+    const r = getKitRating(player, kit);
+    return r.tier !== 'Unranked' && r.retired === true;
+}
+
+// Есть ли у игрока ХОТЯ БЫ ОДИН main-кит в Retired (в режиме Games - хотя бы
+// одна игра). От этого общий средний ранг тоже считается Retired.
+function hasAnyRetiredKit(player, kitsList) {
+    const list = kitsList || ((typeof maintiers !== 'undefined') ? maintiers : []);
+    return list.some(kit => isKitRetired(player, kit));
 }
 
 // Проверка, является ли игрок тестером
@@ -220,7 +244,7 @@ function buildKitRowHTML(player, kit) {
             <span class="m-kit">${kit}</span>
         </div>
         <div class="m-right-side">
-            ${getTierBadge(rating.tier)}
+            ${getTierBadge(rating.tier, rating.retired)}
             <span class="m-elo-box">${eloText}</span>
         </div>
     </div>`;
@@ -241,7 +265,9 @@ function showProfile(player) {
             ? calcAverageTier(player)
             : getCleanTier(player, targetKit);
         if (shownTier !== 'Unranked') {
-            metaHTML += getMetaTierTag(shownTier);
+            const isOverallView = (targetKit === 'all' || targetKit === 'sub-all');
+            const profRetired = isOverallView ? hasAnyRetiredKit(player) : isKitRetired(player, targetKit);
+            metaHTML += getMetaTierTag(shownTier, profRetired);
         }
 
         const modalMeta = document.getElementById('modalPlayerMeta');
@@ -303,10 +329,10 @@ function ovTileHTML(kit, rating, kitImagesMap) {
         </div>`;
     }
     const clr = tierColorOf(rating.tier, '#444b66');
-    const retiredMark = rating.retired ? '<sup class="ov-tile-r">R</sup>' : '';
+    const retiredMark = rating.retired ? '<span class="ov-r">R</span>' : '';
     return `<div class="ov-tile${rating.retired ? ' ov-tile-retired' : ''}" style="border-color: ${clr}99; background: ${clr}26;" title="${escapeHTML(kit)}: ${formatElo(rating)} Elo${rating.retired ? ' (Retired)' : ''}">
         <img class="ov-tile-icon" src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-        <span class="ov-tile-tier" style="color: ${clr};">${rating.tier}${retiredMark}</span>
+        <span class="ov-tile-tier" style="color: ${clr};">${retiredMark}${rating.tier}</span>
     </div>`;
 }
 
@@ -416,6 +442,8 @@ function renderPlayers() {
     const searchInput = document.getElementById('searchInput');
     const search = searchInput ? searchInput.value.toLowerCase() : '';
     const region = window.currentRegionFilter || 'all';
+    const retiredToggle = document.getElementById('retiredToggle');
+    const showRetiredInPlace = retiredToggle ? retiredToggle.checked : true;
     const gamesMode = window.eloMode === 'games';
     const targetKit = gamesMode ? (window.currentGameFilter || 'all') : (window.currentKitFilter || 'all');
     const isOverall = gamesMode ? (targetKit === 'all') : (targetKit === 'all' || targetKit === 'sub-all');
@@ -452,7 +480,12 @@ function renderPlayers() {
         const matchesRegion = (region === 'all' || player.region === region);
         if (!matchesSearch || !matchesRegion) return false;
 
-        if (!isOverall) return getCleanTier(player, targetKit) !== 'Unranked';
+        if (!isOverall) {
+            if (!showRetiredInPlace && isKitRetired(player, targetKit)) return false;
+            return getCleanTier(player, targetKit) !== 'Unranked';
+        }
+        // Общий топ: игрок с Retired-китом (main / игры) без тумблера скрыт, как в Classic PTS
+        if (!showRetiredInPlace && hasAnyRetiredKit(player, gamesMode ? overallKits : null)) return false;
         return overallKits.some(kit => getCleanTier(player, kit) !== 'Unranked');
     });
 
@@ -487,6 +520,12 @@ function renderPlayers() {
         let topClass = '';
         if (index < 5) topClass = `top-rank-${index + 1}`;
 
+        // Retired: карточка приглушается (кроме топ-5), как в Classic PTS
+        const isRet = isOverall
+            ? hasAnyRetiredKit(player, gamesMode ? overallKits : null)
+            : isKitRetired(player, targetKit);
+        if (isRet) topClass = topClass ? topClass + ' retired-status' : 'retired-status';
+
         // Карточка топа по конкретному киту: скин слева, справа ранг в топе,
         // ник, ниже - регион, ранг на ките и Elo.
         if (!isOverall) {
@@ -503,7 +542,7 @@ function renderPlayers() {
                         </div>
                         <div class="bust-card-bottom">
                             ${regionHTML}
-                            ${getTierBadge(rating.tier)}
+                            ${getTierBadge(rating.tier, rating.retired)}
                             <span class="bust-elo-badge" title="Elo на этом ките">${formatElo(rating)} Elo</span>
                         </div>
                     </div>
@@ -517,11 +556,14 @@ function renderPlayers() {
         // их можно листать по горизонтали.
         const totalElo = calcOverallElo(player, overallKits);
         const avgTier = gamesMode ? calcAverageTierOver(player, overallKits) : calcAverageTier(player);
+        const avgClr = tierColorOf(avgTier, '#8892b0');
         const avgTierHTML = avgTier !== 'Unranked'
-            ? `<span class="ov-tag" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
+            ? `<span class="ov-tag" style="color:${avgClr};border-color:${tierColorOf(avgTier, '#444b66')}99;">${isRet ? '<span class="ov-r">R</span>' : ''}${avgTier}</span>`
             : `<span class="ov-tag" style="color:#8892b0;">-</span>`;
         const tilesHTML = sortedKitRatings(player, overallKits)
-            .map(x => ovTileHTML(x.kit, x.rating, activeKitImages)).join('');
+            .map(x => (!showRetiredInPlace && x.rating.retired)
+                ? ovTileHTML(x.kit, { elo: null, tier: 'Unranked', retired: false }, activeKitImages)
+                : ovTileHTML(x.kit, x.rating, activeKitImages)).join('');
 
         htmlFragment += `
         <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
@@ -786,6 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Фильтр китов (Main/Sub Overall)
     initCustomDropdown('kitFilter', 'currentKitFilter', 'all');
+
+    // Тумблер Retired
+    const retiredToggleEl = document.getElementById('retiredToggle');
+    if (retiredToggleEl) retiredToggleEl.addEventListener('change', renderPlayers);
 
     // Фильтр игр (режим Games)
     renderGameOptions();
