@@ -1898,8 +1898,8 @@ body, html {
 /* Скин: занимает левую часть карточки по всей высоте (cover), прижат к низу.
    Поля вокруг скина обрезаются скриптом (trimTransparentImage), поэтому
    он крупный независимо от того, как нарисован файл. */
-.ov-skin-wrap { position: relative; flex: 0 0 42%; max-width: 156px; min-width: 112px; align-self: stretch; overflow: hidden; }
-.ov-skin { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; object-position: center bottom; image-rendering: pixelated; }
+.ov-skin-wrap { position: relative; flex: 0 0 118px; align-self: stretch; overflow: hidden; }
+.ov-skin { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; image-rendering: pixelated; }
 
 .ov-body { flex: 1; min-width: 0; padding: 10px 0 10px 6px; display: flex; flex-direction: column; gap: 5px; }
 .ov-title { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding-right: 10px; }
@@ -1932,10 +1932,13 @@ body, html {
 .ov-tile-empty .ov-tile-tier { color: #6b7490; }
 
 /* Retired на плитке */
-.ov-tile-retired { opacity: .5; }
+.ov-tile-retired { opacity: .4; }
 .ov-tile-r { margin-left: 2px; font-size: 8px; color: var(--text-muted); vertical-align: super; }
 
 /* Кнопки-переключатели Kits / Games (button, а не ссылка) */
 button.mode-switch-btn { background: transparent; border: 1px solid transparent; font-family: inherit; cursor: pointer; }
 button.mode-switch-btn.active { background: rgba(255, 204, 71, .12); border-color: var(--accent); color: var(--accent); }
 .mode-switch-sub { margin-top: -14px; }
+
+/* Красная буква R у Retired (на плитках, в среднем ранге и в бейджах) */
+.ov-r { color: #ff4a4a; font-weight: bold; margin-right: 1px; }
