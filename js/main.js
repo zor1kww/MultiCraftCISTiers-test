@@ -322,6 +322,93 @@ function sortedKitRatings(player, kits) {
             (a.order - b.order));
 }
 
+// ==========================================
+// РЕЖИМЫ: Kits (киты) / Games (мини-игры)
+// ==========================================
+
+window.eloMode = 'kits';
+window.currentGameFilter = 'all';
+
+function setEloMode(mode) {
+    window.eloMode = (mode === 'games') ? 'games' : 'kits';
+    const isGames = window.eloMode === 'games';
+    document.querySelectorAll('[data-elo-mode]').forEach(btn => {
+        const active = btn.getAttribute('data-elo-mode') === window.eloMode;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    const kitSel = document.getElementById('kitFilterCustom');
+    const gameSel = document.getElementById('gameFilterCustom');
+    if (kitSel) kitSel.style.display = isGames ? 'none' : '';
+    if (gameSel) gameSel.style.display = isGames ? '' : 'none';
+    renderPlayers();
+}
+
+// Список игр в выпадающем фильтре (All Games + каждая игра)
+function renderGameOptions() {
+    const panel = document.getElementById('gameFilterPanel');
+    if (!panel) return;
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    panel.innerHTML =
+        '<div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">All Games</div>' +
+        games.map(g => `<div class="custom-select-option" data-value="${escapeHTML(g)}">${escapeHTML(g)}</div>`).join('');
+}
+
+// Игрок "в разрезе игр": те же поля, но рейтинги берутся из player.games.
+// Так все расчёты (getKitRating, calcOverallElo...) работают без изменений.
+function toGameView(player) {
+    return { name: player.name, region: player.region, tiers: player.games || {} };
+}
+
+// Средний ранг по заданному списку китов/игр (в режиме Games - по играм)
+function calcAverageTierOver(player, kits) {
+    const values = kits.map(k => getEffectiveElo(getKitRating(player, k))).filter(v => v !== null);
+    if (values.length === 0) return 'Unranked';
+    return getTierByElo(Math.round(values.reduce((a, b) => a + b, 0) / values.length));
+}
+
+// Скин в общем топе: файл с прозрачными полями обрезается до самого скина,
+// чтобы он занимал всё отведённое место, а не маленький кусочек.
+const DEFAULT_SKIN_SRC = 'assets/skins/default_bust.png';
+window.overallSkinSrc = DEFAULT_SKIN_SRC;
+
+function trimTransparentImage(src) {
+    return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+            try {
+                const w = img.naturalWidth, h = img.naturalHeight;
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const data = ctx.getImageData(0, 0, w, h).data;
+                let minX = w, minY = h, maxX = -1, maxY = -1;
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        if (data[(y * w + x) * 4 + 3] > 8) {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
+                    }
+                }
+                if (maxX < 0 || (minX === 0 && minY === 0 && maxX === w - 1 && maxY === h - 1)) { resolve(src); return; }
+                const cw = maxX - minX + 1, ch = maxY - minY + 1;
+                const out = document.createElement('canvas');
+                out.width = cw; out.height = ch;
+                out.getContext('2d').drawImage(img, minX, minY, cw, ch, 0, 0, cw, ch);
+                resolve(out.toDataURL('image/png'));
+            } catch (e) {
+                resolve(src);   // например, файл недоступен для чтения - берём как есть
+            }
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+    });
+}
+
 function renderPlayers() {
     const list = document.getElementById('playersList');
     if (!list) return;
@@ -329,29 +416,38 @@ function renderPlayers() {
     const searchInput = document.getElementById('searchInput');
     const search = searchInput ? searchInput.value.toLowerCase() : '';
     const region = window.currentRegionFilter || 'all';
-    const targetKit = window.currentKitFilter || 'all';
-    const isOverall = (targetKit === 'all' || targetKit === 'sub-all');
+    const gamesMode = window.eloMode === 'games';
+    const targetKit = gamesMode ? (window.currentGameFilter || 'all') : (window.currentKitFilter || 'all');
+    const isOverall = gamesMode ? (targetKit === 'all') : (targetKit === 'all' || targetKit === 'sub-all');
 
     if (typeof players === 'undefined' || !Array.isArray(players)) {
         list.innerHTML = loadStatusHTML();
         return;
     }
 
+    // В режиме Games работаем с "играми" вместо китов
+    const sourcePlayers = gamesMode ? players.map(toGameView) : players;
+
     const subtitleEl = document.getElementById('tableSubtitle');
     if (subtitleEl) {
-        if (targetKit === 'all') subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
+        if (gamesMode && targetKit === 'all') subtitleEl.innerText = 'GAMES OVERALL LEADERBOARD';
+        else if (targetKit === 'all') subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
         else if (targetKit === 'sub-all') subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
         else subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
     }
 
     const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
     const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
-    const overallKits = (targetKit === 'sub-all') ? activeSubtiers : activeMaintiers;
+    const activeKitImages = gamesMode
+        ? ((typeof gameImages !== 'undefined') ? gameImages : {})
+        : ((typeof kitImages !== 'undefined') ? kitImages : {});
+    const overallKits = gamesMode
+        ? ((typeof miniGames !== 'undefined') ? miniGames : [])
+        : ((targetKit === 'sub-all') ? activeSubtiers : activeMaintiers);
 
     // В топ попадают только игроки, у которых есть рейтинг в выбранном ките
     // (или хотя бы в одном ките выбранной группы Main/Sub).
-    let filtered = players.filter(player => {
+    let filtered = sourcePlayers.filter(player => {
         const matchesSearch = (player.name || '').toLowerCase().includes(search);
         const matchesRegion = (region === 'all' || player.region === region);
         if (!matchesSearch || !matchesRegion) return false;
@@ -371,6 +467,10 @@ function renderPlayers() {
     list.innerHTML = '';
 
     if (filtered.length === 0) {
+        if (gamesMode && !players.some(p => p.games && Object.keys(p.games).length)) {
+            list.innerHTML = '<div style="text-align:center;color:#8892b0;padding:30px 20px;line-height:1.5;">Рейтинг мини-игр появится позже.<br>Здесь будут ранги за BedWars, SkyWars, Sumo и другие игры.</div>';
+            return;
+        }
         list.innerHTML = players.length === 0
             ? '<div style="text-align:center;color:#8892b0;padding:30px 20px;line-height:1.5;">Elo-система только запущена.<br>Игроки появятся после первых ранговых дуэлей.</div>'
             : '<div style="text-align:center;color:#8892b0;padding:20px;">Игроки не найдены</div>';
@@ -416,7 +516,7 @@ function renderPlayers() {
         // средний ранг, ниже плитки рангов открытой вкладки (Main или Sub) -
         // их можно листать по горизонтали.
         const totalElo = calcOverallElo(player, overallKits);
-        const avgTier = calcAverageTier(player);
+        const avgTier = gamesMode ? calcAverageTierOver(player, overallKits) : calcAverageTier(player);
         const avgTierHTML = avgTier !== 'Unranked'
             ? `<span class="ov-tag" style="color:${tierColorOf(avgTier, '#8892b0')};border-color:${tierColorOf(avgTier, '#444b66')}99;">${avgTier}</span>`
             : `<span class="ov-tag" style="color:#8892b0;">-</span>`;
@@ -426,7 +526,7 @@ function renderPlayers() {
         htmlFragment += `
         <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
             <div class="ov-skin-wrap">
-                <img class="ov-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+                <img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';">
             </div>
             <div class="ov-body">
                 <div class="ov-title">
@@ -686,6 +786,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Фильтр китов (Main/Sub Overall)
     initCustomDropdown('kitFilter', 'currentKitFilter', 'all');
+
+    // Фильтр игр (режим Games)
+    renderGameOptions();
+    initCustomDropdown('gameFilter', 'currentGameFilter', 'all');
 
     // Фильтр региона
     initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
@@ -1113,6 +1217,10 @@ function startPlayersAutoRefresh() {
 // Запуск сайта (может вызываться дважды - из DOMContentLoaded и сразу,
 // если DOM уже готов; загрузка стартует один раз)
 function initSite() {
+    // Обрезаем прозрачные поля у скина и перерисовываем список
+    trimTransparentImage(DEFAULT_SKIN_SRC).then(src => {
+        if (src !== window.overallSkinSrc) { window.overallSkinSrc = src; renderPlayers(); }
+    });
     renderPlayers();   // покажет "Загрузка..." до прихода данных
     if (!playersLoadStarted) {
         playersLoadStarted = true;
