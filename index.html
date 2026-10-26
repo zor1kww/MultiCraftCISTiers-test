@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=3.2.0">
+    <link rel="stylesheet" href="css/style.css?v=3.3.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -108,6 +108,11 @@
             <a class="mode-switch-btn" href="classic.html">Classic PTS</a>
         </nav>
 
+        <nav class="mode-switch mode-switch-sub" aria-label="Тип рейтинга">
+            <button type="button" class="mode-switch-btn active" data-elo-mode="kits" aria-pressed="true" onclick="setEloMode('kits')">Kits</button>
+            <button type="button" class="mode-switch-btn" data-elo-mode="games" aria-pressed="false" onclick="setEloMode('games')">Games</button>
+        </nav>
+
         <div class="filters">
             <input type="text" id="searchInput" placeholder="Поиск игрока...">
             
@@ -135,6 +140,14 @@
                     <div class="custom-select-option" data-value="Mace">Mace</div>
                     <div class="custom-select-option" data-value="Crystal">Crystal</div>
                 </div>
+            </div>
+
+            <div class="custom-select" id="gameFilterCustom" style="display:none;">
+                <button type="button" class="custom-select-trigger" id="gameFilterTrigger">
+                    <span id="gameFilterLabel">All Games</span>
+                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="custom-select-panel" id="gameFilterPanel"></div>
             </div>
         </div>
         
@@ -887,8 +900,8 @@
     </div>
 </div>
 
-<script src="js/config.js?v=3.2.0"></script>
-<script src="js/demo-data.js?v=3.2.0"></script>
-<script src="js/main.js?v=3.2.0"></script>
+<script src="js/config.js?v=3.3.0"></script>
+<script src="js/demo-data.js?v=3.3.0"></script>
+<script src="js/main.js?v=3.3.0"></script>
 </body>
 </html>
