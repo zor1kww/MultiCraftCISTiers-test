@@ -96,3 +96,29 @@ const BETA_SHOW_PLAYERS = false;
 // js/demo-data.js, чтобы оценить внешний вид карточек. В боевой версии
 // должно быть false (или строка удалена).
 const DEMO_MODE = true;
+
+
+// ==========================================
+// GAMES: мини-игры (раздел Elo -> Games)
+// ==========================================
+
+// Список мини-игр. Новая игра = одна строка здесь (и картинка в gameImages).
+const miniGames = [
+    "BedWars", "SkyWars", "BedrockBox", "Spleef", "Pillars",
+    "Sumo", "Bed Fight", "Fireball Fight", "SkyWars Duel", "The Bridge"
+];
+
+// Иконки игр - ЗАГОТОВКИ: положите картинки с этими именами в assets/games/
+// (пока файлов нет - плитка просто показывает ранг без иконки).
+const gameImages = {
+    "BedWars":        "assets/games/bedwars.png",
+    "SkyWars":        "assets/games/skywars.png",
+    "BedrockBox":     "assets/games/bedrockbox.png",
+    "Spleef":         "assets/games/spleef.png",
+    "Pillars":        "assets/games/pillars.png",
+    "Sumo":           "assets/games/sumo.png",
+    "Bed Fight":      "assets/games/bed_fight.png",
+    "Fireball Fight": "assets/games/fireball_fight.png",
+    "SkyWars Duel":   "assets/games/skywars_duel.png",
+    "The Bridge":     "assets/games/the_bridge.png"
+};
