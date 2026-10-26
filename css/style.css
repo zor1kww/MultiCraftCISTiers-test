@@ -1895,42 +1895,47 @@ body, html {
 .ov-card.top-rank-4 { background: linear-gradient(90deg, rgba(128, 128, 128, .75) 0%, rgba(128, 128, 128, .32) 28%, var(--bg-solid) 64%); }
 .ov-card.top-rank-5 { background: linear-gradient(90deg, rgba(0, 128, 128, .80) 0%, rgba(0, 128, 128, .36) 28%, var(--bg-solid) 64%); }
 
-/* Скин: крупный, во всю ширину левого блока (120px), прижат к низу, целиком
-   (contain), без обрезки. Размер задаётся блоком, а не размером файла
-   assets/skins/default_bust.png. */
-.ov-skin-wrap { position: relative; flex: 0 0 120px; align-self: stretch; min-height: 150px; overflow: hidden; }
-.ov-skin { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; image-rendering: pixelated; }
+/* Скин: занимает левую часть карточки по всей высоте (cover), прижат к низу.
+   Поля вокруг скина обрезаются скриптом (trimTransparentImage), поэтому
+   он крупный независимо от того, как нарисован файл. */
+.ov-skin-wrap { position: relative; flex: 0 0 42%; max-width: 156px; min-width: 112px; align-self: stretch; overflow: hidden; }
+.ov-skin { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; object-position: center bottom; image-rendering: pixelated; }
 
-.ov-body { flex: 1; min-width: 0; padding: 14px 0 14px 4px; display: flex; flex-direction: column; gap: 8px; }
-.ov-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-right: 12px; }
+.ov-body { flex: 1; min-width: 0; padding: 10px 0 10px 6px; display: flex; flex-direction: column; gap: 5px; }
+.ov-title { display: flex; align-items: baseline; gap: 6px; min-width: 0; padding-right: 10px; }
 .ov-title .player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov-elo { margin-top: -4px; font-size: 14px; color: var(--text-muted); }
-.ov-tags { display: flex; gap: 8px; }
+.ov-elo { margin-top: -2px; font-size: 13px; color: var(--text-muted); }
+.ov-tags { display: flex; gap: 6px; }
 .ov-tag {
-    box-sizing: border-box; width: 64px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
-    font-size: 15px; font-weight: bold; color: var(--text-muted);
-    border: 1px solid var(--border-color); border-radius: 10px; background: rgba(0, 0, 0, .28);
+    box-sizing: border-box; width: 58px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: bold; color: var(--text-muted);
+    border: 1px solid var(--border-color); border-radius: 9px; background: rgba(0, 0, 0, .28);
 }
 
 /* Горизонтально листаемый ряд плиток */
 .ov-scroll {
-    display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
-    padding: 2px 14px 4px 0; margin-top: 2px;
+    display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden;
+    padding: 2px 14px 2px 0; margin-top: 1px;
     scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
             mask-image: linear-gradient(90deg, #000 90%, transparent);
 }
 .ov-scroll::-webkit-scrollbar { display: none; }
 .ov-tile {
-    flex: 0 0 56px; height: 66px; box-sizing: border-box; scroll-snap-align: start;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    border: 1.5px solid; border-radius: 14px;
+    flex: 0 0 52px; height: 54px; box-sizing: border-box; scroll-snap-align: start;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    border: 1.5px solid; border-radius: 12px;
 }
-.ov-tile-icon { width: 28px; height: 28px; object-fit: contain; }
-.ov-tile-tier { font-size: 14px; font-weight: bold; line-height: 1; }
+.ov-tile-icon { width: 24px; height: 24px; object-fit: contain; }
+.ov-tile-tier { font-size: 12px; font-weight: bold; line-height: 1; }
 .ov-tile-empty { border-color: var(--border-color); background: rgba(255, 255, 255, .03); opacity: .6; }
 .ov-tile-empty .ov-tile-tier { color: #6b7490; }
 
 /* Retired на плитке */
 .ov-tile-retired { opacity: .5; }
 .ov-tile-r { margin-left: 2px; font-size: 8px; color: var(--text-muted); vertical-align: super; }
+
+/* Кнопки-переключатели Kits / Games (button, а не ссылка) */
+button.mode-switch-btn { background: transparent; border: 1px solid transparent; font-family: inherit; cursor: pointer; }
+button.mode-switch-btn.active { background: rgba(255, 204, 71, .12); border-color: var(--accent); color: var(--accent); }
+.mode-switch-sub { margin-top: -14px; }
