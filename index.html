@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=3.4.0">
+    <link rel="stylesheet" href="css/style.css?v=3.5.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -91,94 +91,39 @@
 <header class="header">
     <div class="logo">MultiCraftCISTiers</div>
     <div class="header-right">
+        <a class="tg-icon-btn" href="https://t.me/MultiCraftCISTiers" target="_blank" rel="noopener" aria-label="Telegram-канал">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 3.4 2.8 10.6c-1.3.5-1.3 1.3-.2 1.6l4.8 1.5 1.8 5.6c.2.6.1.8.7.8.5 0 .7-.2 1-.5l2.3-2.3 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.8c.3-1.2-.5-1.8-1.2-1.4ZM8.6 13.2l9.1-5.7c.4-.3.8-.1.5.2l-7.5 6.8-.3 3.2-1.8-4.5Z"/></svg>
+        </a>
         <button class="menu-btn" id="menuBtn">Меню</button>
     </div>
 </header>
 
 <div class="main-page" id="mainPage" style="display: block;">
     <div class="hero">
-        <p>Главный соревновательный рейтинг СНГ PvP комьюнити игры MultiCraft для мобильных игроков. Сражайтесь в ранговых дуэлях, зарабатывайте Elo на каждом ките и занимайте топовые позиции.</p>
+        <nav class="sys-tabs" aria-label="Система рейтинга">
+            <a class="sys-tab active" href="index.html" aria-current="page">Elo</a>
+            <a class="sys-tab" href="classic.html">PTS</a>
+        </nav>
 
-        <div class="tg-wrapper">
-            <a class="telegram-btn" href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
+        <div class="ctrl-row">
+            <div class="seg" role="group" aria-label="Тип рейтинга">
+                <button type="button" class="seg-btn active" data-elo-mode="kits" aria-pressed="true" onclick="setEloMode('kits')">Kits</button>
+                <button type="button" class="seg-btn" data-elo-mode="games" aria-pressed="false" onclick="setEloMode('games')">Games</button>
+            </div>
+            <button type="button" class="icon-btn" id="searchToggle" aria-label="Поиск игрока" onclick="toggleSearch()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button type="button" class="filter-btn" id="filterBtn" onclick="openFilterSheet()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <span>Фильтры</span><span class="filter-badge" id="filterBadge" hidden>0</span>
+            </button>
         </div>
 
-        <nav class="mode-switch" aria-label="Режим рейтинга">
-            <a class="mode-switch-btn active" href="index.html" aria-current="page">Beta Elo</a>
-            <a class="mode-switch-btn" href="classic.html">Classic PTS</a>
-        </nav>
-
-        <nav class="mode-switch mode-switch-sub" aria-label="Тип рейтинга">
-            <button type="button" class="mode-switch-btn active" data-elo-mode="kits" aria-pressed="true" onclick="setEloMode('kits')">Kits</button>
-            <button type="button" class="mode-switch-btn" data-elo-mode="games" aria-pressed="false" onclick="setEloMode('games')">Games</button>
-        </nav>
-
-        <div class="filters">
+        <div class="search-row" id="searchRow" hidden>
             <input type="text" id="searchInput" placeholder="Поиск игрока...">
-            
-            <div class="custom-select" id="kitFilterCustom">
-                <button type="button" class="custom-select-trigger" id="kitFilterTrigger">
-                    <span id="kitFilterLabel">Main Kits</span>
-                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="custom-select-panel" id="kitFilterPanel">
-                    <div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">Main Kits</div>
-                    <div class="custom-select-option" data-value="Hardcore">Hardcore</div>
-                    <div class="custom-select-option" data-value="Manhunt">Manhunt</div>
-                    <div class="custom-select-option" data-value="Diamond Pot">Diamond Pot</div>
-                    <div class="custom-select-option" data-value="Beast">Beast</div>
-                    <div class="custom-select-option" data-value="Emerald">Emerald</div>
-                    <div class="custom-select-option" data-value="Emerald Pot">Emerald Pot</div>
-                    <div class="custom-select-option" data-value="RVM">RVM</div>
-                    <div class="custom-select-option" data-value="Dragonhide">Dragonhide</div>
-                    <div class="custom-select-option" data-value="Pickaxe">Pickaxe</div>
-                    <div class="custom-select-option" data-value="SMP">SMP</div>
-                    <div class="custom-select-option" data-value="Vanilla">Vanilla</div>
-                    <div class="custom-select-option custom-select-option-group" data-value="sub-all" style="font-weight:700;">Sub Kits</div>
-                    <div class="custom-select-option" data-value="Combo">Combo</div>
-                    <div class="custom-select-option" data-value="Gapple">Gapple</div>
-                    <div class="custom-select-option" data-value="Mace">Mace</div>
-                    <div class="custom-select-option" data-value="Crystal">Crystal</div>
-                </div>
-            </div>
-
-            <div class="custom-select" id="gameFilterCustom" style="display:none;">
-                <button type="button" class="custom-select-trigger" id="gameFilterTrigger">
-                    <span id="gameFilterLabel">All Games</span>
-                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="custom-select-panel" id="gameFilterPanel"></div>
-            </div>
-        </div>
-        
-        <div class="filters-row-2">
-            <div class="custom-select" id="regionFilterCustom">
-                <button type="button" class="custom-select-trigger" id="regionFilterTrigger">
-                    <span id="regionFilterLabel">Все регионы СНГ</span>
-                    <svg class="custom-select-arrow" width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="custom-select-panel" id="regionFilterPanel">
-                    <div class="custom-select-option selected" data-value="all">Все регионы СНГ</div>
-                    <div class="custom-select-option" data-value="RU">RU</div>
-                    <div class="custom-select-option" data-value="UA">UA</div>
-                    <div class="custom-select-option" data-value="BY">BY</div>
-                    <div class="custom-select-option" data-value="KZ">KZ</div>
-                    <div class="custom-select-option" data-value="UZ">UZ</div>
-                    <div class="custom-select-option" data-value="KG">KG</div>
-                    <div class="custom-select-option" data-value="AM">AM</div>
-                    <div class="custom-select-option" data-value="AZ">AZ</div>
-                    <div class="custom-select-option" data-value="MD">MD</div>
-                    <div class="custom-select-option" data-value="TJ">TJ</div>
-                </div>
-            </div>
         </div>
 
-        <div class="filters-row-3">
-            <label class="checkbox-label">
-                <input type="checkbox" id="retiredToggle" checked>
-                Показывать Retired в топе (наравне по Elo)
-            </label>
-        </div>
+        <div class="chips" id="chipsRow" role="tablist" aria-label="Режим или кит"></div>
 
         <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
         <div class="players-list" id="playersList"></div>
@@ -907,8 +852,22 @@
     </div>
 </div>
 
-<script src="js/config.js?v=3.4.0"></script>
-<script src="js/demo-data.js?v=3.4.0"></script>
-<script src="js/main.js?v=3.4.0"></script>
+<div class="sheet-backdrop" id="filterBackdrop" hidden onclick="closeFilterSheet()"></div>
+<div class="sheet" id="filterSheet" hidden role="dialog" aria-label="Фильтры">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Фильтры</div>
+    <div class="sheet-label">Регион</div>
+    <div class="chips-wrap" id="regionChips"></div>
+    <label class="toggle-row">
+        <span>Показывать Retired</span>
+        <input type="checkbox" id="retiredToggle" checked>
+        <span class="switch" aria-hidden="true"></span>
+    </label>
+    <button type="button" class="sheet-done" onclick="closeFilterSheet()">Готово</button>
+</div>
+
+<script src="js/config.js?v=3.5.0"></script>
+<script src="js/demo-data.js?v=3.5.0"></script>
+<script src="js/main.js?v=3.5.0"></script>
 </body>
 </html>
