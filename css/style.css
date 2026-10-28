@@ -1942,3 +1942,74 @@ button.mode-switch-btn.active { background: rgba(255, 204, 71, .12); border-colo
 
 /* Красная буква R у Retired (на плитках, в среднем ранге и в бейджах) */
 .ov-r { color: #ff4a4a; font-weight: bold; margin-right: 1px; }
+
+
+/* ==========================================
+   v5: компактное управление
+   Единые значения: рамка 1px, скругление 14px (карточки), 12px (кнопки)
+   ========================================== */
+
+/* Общая рамка вокруг контента убрана: карточки лежат прямо на фоне */
+.hero { background: none; border: none; box-shadow: none; padding: 10px 12px 24px; border-radius: 0; }
+
+/* Telegram в шапке значком */
+.tg-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-right: 8px; color: var(--accent); border: 1px solid rgba(255, 204, 71, .3); border-radius: 12px; background: var(--sidebar-item); text-decoration: none; }
+.header-right { display: flex; align-items: center; }
+
+/* Elo | PTS - вкладки с линией под активной */
+.sys-tabs { display: flex; gap: 24px; margin: 0 0 12px; border-bottom: 1px solid var(--border-color); }
+.sys-tab { padding: 8px 2px 10px; font-size: 15px; font-weight: bold; color: var(--text-muted); text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.sys-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Строка управления: Kits|Games, поиск, фильтры */
+.ctrl-row { display: flex; align-items: stretch; gap: 8px; }
+.seg { display: flex; flex: 1; padding: 3px; background: var(--bg-solid); border: 1px solid var(--border-color); border-radius: 12px; }
+.seg-btn { flex: 1; padding: 8px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; }
+.seg-btn.active { background: rgba(255, 204, 71, .14); color: var(--accent); }
+.icon-btn, .filter-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-solid); color: var(--text-main); font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; }
+.icon-btn { width: 44px; }
+.icon-btn.active { color: var(--accent); border-color: var(--accent); }
+.filter-btn { padding: 0 12px; }
+.filter-badge { min-width: 18px; padding: 1px 5px; border-radius: 9px; background: var(--accent); color: #0b0f1c; font-size: 11px; line-height: 16px; text-align: center; }
+.filter-badge[hidden] { display: none; }
+.search-row { margin-top: 8px; }
+.search-row[hidden] { display: none; }
+.search-row input { width: 100%; box-sizing: border-box; }
+
+/* Лента чипов */
+.chips { display: flex; gap: 8px; overflow-x: auto; margin: 10px -12px 0; padding: 2px 12px 8px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-solid); color: var(--text-muted); font-family: inherit; font-size: 13px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+.chip img { width: 18px; height: 18px; object-fit: contain; }
+.chip.active { color: var(--accent); border-color: var(--accent); background: rgba(255, 204, 71, .10); }
+
+/* Название списка - мелкая строка вместо большого заголовка */
+.section-title { font-size: 13px; font-weight: normal; letter-spacing: .3px; margin: 8px 2px 10px; color: var(--text-muted); text-align: left; text-transform: none; }
+
+/* Свечение только у топ-3, у 4-5 остаётся только цвет рамки */
+.top-rank-4, .top-rank-5 { box-shadow: none; }
+.player-container { border-radius: 14px; }
+
+/* Шторка фильтров */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 2000; }
+.sheet-backdrop[hidden], .sheet[hidden] { display: none; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2001; max-width: 520px; margin: 0 auto; padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--bg-solid); border: 1px solid var(--border-color); border-bottom: 0; border-radius: 18px 18px 0 0; }
+.sheet-handle { width: 40px; height: 4px; margin: 0 auto 12px; border-radius: 2px; background: var(--border-color); }
+.sheet-title { font-size: 17px; font-weight: bold; color: var(--text-main); margin-bottom: 14px; }
+.sheet-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border-color); color: var(--text-main); font-size: 15px; cursor: pointer; }
+.toggle-row input { position: absolute; opacity: 0; pointer-events: none; }
+.switch { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--border-color); transition: background .15s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.toggle-row input:checked + .switch { background: var(--accent); }
+.toggle-row input:checked + .switch::after { transform: translateX(18px); }
+.sheet-done { width: 100%; margin-top: 6px; padding: 13px; border: 0; border-radius: 12px; background: var(--accent); color: #0b0f1c; font-family: inherit; font-size: 15px; font-weight: bold; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
+/* Шапка помещается на узких экранах: логотип сжимается, кнопки не вылезают */
+.header { gap: 10px; padding: 12px 14px; }
+.logo { min-width: 0; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-right { flex: 0 0 auto; }
+.tg-icon-btn { width: 38px; height: 38px; margin-right: 6px; }
+.menu-btn { padding: 9px 12px; }
