@@ -357,27 +357,115 @@ window.currentGameFilter = 'all';
 
 function setEloMode(mode) {
     window.eloMode = (mode === 'games') ? 'games' : 'kits';
-    const isGames = window.eloMode === 'games';
     document.querySelectorAll('[data-elo-mode]').forEach(btn => {
         const active = btn.getAttribute('data-elo-mode') === window.eloMode;
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    const kitSel = document.getElementById('kitFilterCustom');
-    const gameSel = document.getElementById('gameFilterCustom');
-    if (kitSel) kitSel.style.display = isGames ? 'none' : '';
-    if (gameSel) gameSel.style.display = isGames ? '' : 'none';
+    renderChips();
     renderPlayers();
 }
 
-// Список игр в выпадающем фильтре (All Games + каждая игра)
-function renderGameOptions() {
-    const panel = document.getElementById('gameFilterPanel');
-    if (!panel) return;
-    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
-    panel.innerHTML =
-        '<div class="custom-select-option custom-select-option-group selected" data-value="all" style="font-weight:700;">All Games</div>' +
-        games.map(g => `<div class="custom-select-option" data-value="${escapeHTML(g)}">${escapeHTML(g)}</div>`).join('');
+function pluralPlayers(n) {
+    const a = n % 10, b = n % 100;
+    if (a === 1 && b !== 11) return '\u0438\u0433\u0440\u043e\u043a';
+    if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return '\u0438\u0433\u0440\u043e\u043a\u0430';
+    return '\u0438\u0433\u0440\u043e\u043a\u043e\u0432';
+}
+
+// ==========================================
+// Лента чипов (киты или игры), поиск, шторка фильтров
+// ==========================================
+
+const REGION_CODES = ['RU', 'UA', 'BY', 'KZ', 'UZ', 'KG', 'AM', 'AZ', 'MD', 'TJ'];
+
+function chipHTML(value, label, iconSrc, active, handler) {
+    const icon = iconSrc ? `<img src="${escapeHTML(iconSrc)}" onerror="this.style.display='none'" alt="">` : '';
+    return `<button type="button" class="chip${active ? ' active' : ''}" data-v="${escapeHTML(value)}" onclick="${handler}">${icon}<span>${escapeHTML(label)}</span></button>`;
+}
+
+function renderChips() {
+    const row = document.getElementById('chipsRow');
+    if (!row) return;
+    let html;
+    if (window.eloMode === 'games') {
+        const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+        const images = (typeof gameImages !== 'undefined') ? gameImages : {};
+        const active = window.currentGameFilter || 'all';
+        html = chipHTML('all', 'All Games', '', active === 'all', 'setBoardFilter(this.dataset.v)') +
+            games.map(g => chipHTML(g, g, images[g], active === g, 'setBoardFilter(this.dataset.v)')).join('');
+    } else {
+        const kits = (typeof maintiers !== 'undefined') ? maintiers : [];
+        const subs = (typeof subtiers !== 'undefined') ? subtiers : [];
+        const images = (typeof kitImages !== 'undefined') ? kitImages : {};
+        const active = window.currentKitFilter || 'all';
+        html = chipHTML('all', 'Overall', '', active === 'all', 'setBoardFilter(this.dataset.v)') +
+            chipHTML('sub-all', 'Sub Overall', '', active === 'sub-all', 'setBoardFilter(this.dataset.v)') +
+            kits.concat(subs).map(k => chipHTML(k, k, images[k], active === k, 'setBoardFilter(this.dataset.v)')).join('');
+    }
+    row.innerHTML = html;
+    const activeChip = row.querySelector('.chip.active');
+    if (activeChip) row.scrollLeft = Math.max(0, activeChip.offsetLeft - (row.clientWidth - activeChip.offsetWidth) / 2);
+}
+
+function setBoardFilter(value) {
+    if (window.eloMode === 'games') window.currentGameFilter = value;
+    else window.currentKitFilter = value;
+    renderChips();
+    renderPlayers();
+}
+
+function toggleSearch() {
+    const row = document.getElementById('searchRow');
+    const input = document.getElementById('searchInput');
+    const btn = document.getElementById('searchToggle');
+    if (!row) return;
+    const open = row.hasAttribute('hidden');
+    if (open) {
+        row.removeAttribute('hidden');
+        if (input) input.focus();
+    } else {
+        row.setAttribute('hidden', '');
+        if (input) { input.value = ''; renderPlayers(); }
+    }
+    if (btn) btn.classList.toggle('active', open);
+}
+
+function updateFilterBadge() {
+    const badge = document.getElementById('filterBadge');
+    const retired = document.getElementById('retiredToggle');
+    const count = ((window.currentRegionFilter || 'all') !== 'all' ? 1 : 0) + ((retired && !retired.checked) ? 1 : 0);
+    if (badge) { badge.textContent = String(count); badge.hidden = count === 0; }
+}
+
+function renderRegionChips() {
+    const box = document.getElementById('regionChips');
+    if (!box) return;
+    const active = window.currentRegionFilter || 'all';
+    box.innerHTML = chipHTML('all', '\u0412\u0441\u0435', '', active === 'all', 'setRegionFilter(this.dataset.v)') +
+        REGION_CODES.map(r => chipHTML(r, r, '', active === r, 'setRegionFilter(this.dataset.v)')).join('');
+}
+
+function setRegionFilter(value) {
+    window.currentRegionFilter = value;
+    renderRegionChips();
+    updateFilterBadge();
+    renderPlayers();
+}
+
+function openFilterSheet() {
+    renderRegionChips();
+    const sheet = document.getElementById('filterSheet');
+    const back = document.getElementById('filterBackdrop');
+    if (sheet) sheet.removeAttribute('hidden');
+    if (back) back.removeAttribute('hidden');
+}
+
+function closeFilterSheet() {
+    const sheet = document.getElementById('filterSheet');
+    const back = document.getElementById('filterBackdrop');
+    if (sheet) sheet.setAttribute('hidden', '');
+    if (back) back.setAttribute('hidden', '');
 }
 
 // Игрок "в разрезе игр": те же поля, но рейтинги берутся из player.games.
@@ -456,13 +544,12 @@ function renderPlayers() {
     // В режиме Games работаем с "играми" вместо китов
     const sourcePlayers = gamesMode ? players.map(toGameView) : players;
 
-    const subtitleEl = document.getElementById('tableSubtitle');
-    if (subtitleEl) {
-        if (gamesMode && targetKit === 'all') subtitleEl.innerText = 'GAMES OVERALL LEADERBOARD';
-        else if (targetKit === 'all') subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
-        else if (targetKit === 'sub-all') subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
-        else subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
-    }
+    // Название списка (число игроков дописывается ниже, когда список отфильтрован)
+    let boardLabel;
+    if (gamesMode && targetKit === 'all') boardLabel = 'Games Overall';
+    else if (targetKit === 'all') boardLabel = 'Main Overall';
+    else if (targetKit === 'sub-all') boardLabel = 'Sub Overall';
+    else boardLabel = targetKit;
 
     const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
     const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
@@ -509,6 +596,9 @@ function renderPlayers() {
             : '<div style="text-align:center;color:#8892b0;padding:20px;">Игроки не найдены</div>';
         return;
     }
+
+    const subtitleEl = document.getElementById('tableSubtitle');
+    if (subtitleEl) subtitleEl.textContent = `${boardLabel} \u00b7 ${filtered.length} ${pluralPlayers(filtered.length)}`;
 
     let htmlFragment = '';
 
@@ -831,11 +921,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Тумблер Retired
     const retiredToggleEl = document.getElementById('retiredToggle');
-    if (retiredToggleEl) retiredToggleEl.addEventListener('change', renderPlayers);
+    if (retiredToggleEl) retiredToggleEl.addEventListener('change', () => { updateFilterBadge(); renderPlayers(); });
 
-    // Фильтр игр (режим Games)
-    renderGameOptions();
-    initCustomDropdown('gameFilter', 'currentGameFilter', 'all');
+    // Фильтры на чипах: состояние по умолчанию и первая отрисовка ленты
+    window.currentKitFilter = 'all';
+    window.currentGameFilter = 'all';
+    window.currentRegionFilter = 'all';
+    renderChips();
+    updateFilterBadge();
 
     // Фильтр региона
     initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
