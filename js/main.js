@@ -710,7 +710,7 @@ function buildEloTable() {
 // ==========================================
 
 // Переключение вкладок
-function switchTab(tabId) {
+function showTab(tabId) {
     const sb = document.getElementById('sidebar');
     if (sb) sb.classList.remove('active');
     
@@ -721,9 +721,16 @@ function switchTab(tabId) {
         tab.style.display = 'none';
     });
     
-    if (tabId === 'mainPage') {
+    if (tabId === 'mainPage' || tabId === 'boardTab') {
         if (mp) mp.style.display = 'block';
+        // Внутри главной страницы два экрана: главная и рейтинг
+        const homeScreen = document.getElementById('homeScreen');
+        const boardScreen = document.getElementById('boardScreen');
+        const isBoard = tabId === 'boardTab';
+        if (homeScreen) homeScreen.hidden = isBoard;
+        if (boardScreen) boardScreen.hidden = !isBoard;
         renderPlayers();
+        renderHome();
     } else {
         const target = document.getElementById(tabId);
         if (target) target.style.display = 'block';
@@ -737,9 +744,38 @@ function switchTab(tabId) {
     window.scrollTo(0, 0);
 }
 
-function backHome() {
-    switchTab('mainPage');
+// ==========================================
+// МАРШРУТЫ: адрес после # -> экран. Работает кнопка "Назад" браузера.
+// "" - главная, #rating - рейтинг, #duels, #start, #info - разделы
+// ==========================================
+const ROUTE_TO_TAB = { '': 'mainPage', rating: 'boardTab', duels: 'duelsTab', start: 'testingTab', info: 'otherInfoTab' };
+const TAB_TO_ROUTE = { mainPage: '', boardTab: 'rating', duelsTab: 'duels', testingTab: 'start', otherInfoTab: 'info' };
+
+function currentRoute() {
+    return location.hash.replace(/^#\/?/, '');
 }
+
+function applyRoute() {
+    const route = currentRoute();
+    showTab(ROUTE_TO_TAB.hasOwnProperty(route) ? ROUTE_TO_TAB[route] : 'mainPage');
+}
+
+// Переход на маршрут: меняет адрес (запись в истории браузера) и показывает экран
+function navigate(route) {
+    if (currentRoute() === route) { applyRoute(); return; }
+    location.hash = route;   // пустой маршрут оставляет "#" - это главная
+}
+
+function switchTab(tabId) {
+    navigate(TAB_TO_ROUTE.hasOwnProperty(tabId) ? TAB_TO_ROUTE[tabId] : '');
+}
+
+function backHome() {
+    navigate('');
+}
+
+window.addEventListener('hashchange', applyRoute);
+
 
 // ==========================================
 // ХАБ-КАРТОЧКИ ("Как играть" / "Другая информация")
@@ -1266,10 +1302,7 @@ async function fetchPlayersFromApi(timeoutMs) {
 // ==========================================
 
 function scrollToLeaderboard() {
-    const board = document.getElementById('leaderboard');
-    if (!board) return;
-    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    board.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    navigate('rating');
 }
 
 function submitHomeSearch(event) {
@@ -1295,8 +1328,8 @@ function openHomeMode(mode, value) {
 function homeModeCardHTML(mode, value, label, iconSrc) {
     const icon = iconSrc
         ? `<img src="${escapeHTML(iconSrc)}" alt="" onerror="this.style.display='none';">`
-        : `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    return `<button type="button" class="home-mode-card" onclick="openHomeMode('${mode}', '${escapeHTML(value)}')">${icon}<span>${escapeHTML(label)}</span><span class="home-mode-arrow" aria-hidden="true">↗</span></button>`;
+        : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<button type="button" class="home-mode-card" onclick="openHomeMode('${mode}', '${escapeHTML(value)}')">${icon}<span>${escapeHTML(label)}</span></button>`;
 }
 
 function renderHomeModeCards() {
@@ -1315,14 +1348,10 @@ function renderHome() {
     const leadersContainer = document.getElementById('homeTopPlayers');
     const playersCount = document.getElementById('homePlayersCount');
     const duelsCount = document.getElementById('homeDuelsCount');
-    const kitsCount = document.getElementById('homeKitsCount');
-    const kits = [...((typeof maintiers !== 'undefined') ? maintiers : []), ...((typeof subtiers !== 'undefined') ? subtiers : [])];
-    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
-    if (kitsCount) kitsCount.textContent = String(kits.length + games.length);
 
     if (typeof players === 'undefined' || !Array.isArray(players)) {
-        if (recentContainer) recentContainer.innerHTML = '<div class="home-loading">Загрузка последних дуэлей...</div>';
-        if (leadersContainer) leadersContainer.innerHTML = '<div class="home-loading">Загрузка рейтинга...</div>';
+        if (recentContainer) recentContainer.innerHTML = '<div class="home-empty">Загрузка...</div>';
+        if (leadersContainer) leadersContainer.innerHTML = '<div class="home-empty">Загрузка...</div>';
         return;
     }
 
@@ -1335,15 +1364,16 @@ function renderHome() {
             const rating = duel.winnerSide && typeof duel.winnerSide.eloAfter === 'number' ? getTierByElo(duel.winnerSide.eloAfter) : 'Unranked';
             const color = tierColorOf(rating, '#8892b0');
             const delta = duel.winnerSide ? formatDelta(duel.winnerSide.delta) : '';
+            const kitIcon = (typeof kitImages !== 'undefined' && kitImages[duel.kit]) || '';
             return `<article class="home-result-row">
-                <div class="home-result-kit"><img src="${escapeHTML((typeof kitImages !== 'undefined' && kitImages[duel.kit]) || '')}" alt="" onerror="this.style.display='none';"></div>
+                <div class="home-result-kit"><img src="${escapeHTML(kitIcon)}" alt="" onerror="this.style.display='none';"></div>
                 <div class="home-result-main">
-                    <div class="home-result-names"><button type="button" class="home-player-link" ${profileOnClick(duel.winnerName)}>${escapeHTML(duel.winnerName)}</button><span>победил</span><button type="button" class="home-player-link home-player-link-muted" ${profileOnClick(duel.loserName)}>${escapeHTML(duel.loserName)}</button></div>
-                    <div class="home-result-meta">${escapeHTML(duel.kit)} · ${escapeHTML(formatDuelTime(duel))}</div>
+                    <div class="home-result-names"><button type="button" class="home-player-link" ${profileOnClick(duel.winnerName)}>${escapeHTML(duel.winnerName)}</button><span>\u2192</span><button type="button" class="home-player-link home-player-link-muted" ${profileOnClick(duel.loserName)}>${escapeHTML(duel.loserName)}</button></div>
+                    <div class="home-result-meta">${escapeHTML(duel.kit)} \u00b7 ${escapeHTML(formatDuelTime(duel))}</div>
                 </div>
                 <div class="home-result-rank" style="color:${color};border-color:${color}55;background:${color}11;"><strong>${rating}</strong><span>${delta}</span></div>
             </article>`;
-        }).join('') : '<div class="home-empty">После первых ранговых дуэлей здесь появятся результаты.</div>';
+        }).join('') : '<div class="home-empty">Пока нет дуэлей</div>';
     }
 
     const mainKits = (typeof maintiers !== 'undefined') ? maintiers : [];
@@ -1358,12 +1388,12 @@ function renderHome() {
             const retired = hasAnyRetiredKit(player);
             return `<button type="button" class="home-leader-row" ${profileOnClick(player.name)}>
                 <span class="home-leader-position home-leader-position-${index + 1}">${index + 1}</span>
-                <img class="home-leader-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+                <img class="home-leader-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';">
                 <span class="home-leader-info"><strong>${escapeHTML(player.name)}</strong><span>${escapeHTML(player.region || '?')}</span></span>
                 <span class="home-leader-tier">${getTierBadge(averageTier, retired)}</span>
-                <span class="home-leader-elo"><strong>${calcOverallElo(player, mainKits)}</strong><span>Elo</span></span>
+                <span class="home-leader-elo">${calcOverallElo(player, mainKits)}</span>
             </button>`;
-        }).join('') : '<div class="home-empty">Лидеры появятся после первых ранговых дуэлей.</div>';
+        }).join('') : '<div class="home-empty">Пока нет игроков</div>';
     }
 }
 
@@ -1468,6 +1498,7 @@ function initSite() {
         if (src !== window.overallSkinSrc) { window.overallSkinSrc = src; renderPlayers(); }
     });
     renderHomeModeCards();
+    applyRoute();          // экран по адресу (#rating и т.д.)
     renderHome();
     renderPlayers();   // покажет "Загрузка..." до прихода данных
     if (!playersLoadStarted) {
