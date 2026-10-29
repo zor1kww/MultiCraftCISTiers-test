@@ -19,7 +19,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=3.5.0">
+    <link rel="stylesheet" href="css/style.css?v=3.6.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -76,10 +76,11 @@
 
 <div class="sidebar" id="sidebar">
     <h3>Навигация</h3>
-    <a href="#" onclick="switchTab('mainPage')">Главная</a>
-    <a href="#" onclick="switchTab('duelsTab')">Дуэли</a>
-    <a href="#" onclick="switchTab('testingTab')">Как играть</a>
-    <a href="#" onclick="switchTab('otherInfoTab')">Другая информация</a>
+    <a href="#" onclick="switchTab('mainPage'); return false;">Главная</a>
+    <a href="#" onclick="switchTab('boardTab'); return false;">Рейтинг</a>
+    <a href="#" onclick="switchTab('duelsTab'); return false;">Дуэли</a>
+    <a href="#" onclick="switchTab('testingTab'); return false;">Как играть</a>
+    <a href="#" onclick="switchTab('otherInfoTab'); return false;">Другая информация</a>
     <a href="https://t.me/MultiCraftCISTiers" target="_blank">Telegram</a>
     
     <div class="theme-toggle-container">
@@ -89,7 +90,7 @@
 </div>
 
 <header class="header">
-    <div class="logo">MultiCraftCISTiers</div>
+    <div class="logo" onclick="navigate('')" style="cursor:pointer;">MultiCraftCISTiers</div>
     <div class="header-right">
         <a class="tg-icon-btn" href="https://t.me/MultiCraftCISTiers" target="_blank" rel="noopener" aria-label="Telegram-канал">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 3.4 2.8 10.6c-1.3.5-1.3 1.3-.2 1.6l4.8 1.5 1.8 5.6c.2.6.1.8.7.8.5 0 .7-.2 1-.5l2.3-2.3 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.8c.3-1.2-.5-1.8-1.2-1.4ZM8.6 13.2l9.1-5.7c.4-.3.8-.1.5.2l-7.5 6.8-.3 3.2-1.8-4.5Z"/></svg>
@@ -99,87 +100,61 @@
 </header>
 
 <div class="main-page" id="mainPage" style="display: block;">
+    <div id="homeScreen">
     <section class="home-hero" id="homeHero" aria-labelledby="homeHeroTitle">
-        <div class="home-hero-content">
-            <div class="home-kicker"><span class="home-status-dot"></span>Мобильный PvP · Ранговые дуэли</div>
-            <h1 id="homeHeroTitle">ТВОЙ БОЙ.<br><span>ТВОЕ МЕСТО В ТОПЕ.</span></h1>
-            <p>Сражайся в любимых китах, повышай Elo и докажи свой уровень среди игроков MultiCraft CIS.</p>
+        <h1 id="homeHeroTitle">Рейтинг PvP-игроков <span>MultiCraft</span></h1>
 
-            <form class="home-search" id="homeSearchForm" onsubmit="submitHomeSearch(event)" role="search">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                <input type="search" id="homeSearchInput" placeholder="Найти игрока по нику" aria-label="Найти игрока по нику" autocomplete="off">
-                <button type="submit">Найти</button>
-            </form>
+        <form class="home-search" id="homeSearchForm" onsubmit="submitHomeSearch(event)" role="search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input type="search" id="homeSearchInput" placeholder="Ник игрока" aria-label="Найти игрока по нику" autocomplete="off">
+            <button type="submit" aria-label="Найти"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </form>
 
-            <div class="home-actions">
-                <button type="button" class="home-primary-btn" onclick="scrollToLeaderboard()">Открыть рейтинг <span aria-hidden="true">→</span></button>
-                <a class="home-secondary-btn" href="classic.html">PTS-тестирование</a>
-            </div>
-
-            <div class="home-stats" aria-label="Статистика рейтинга">
-                <div class="home-stat"><strong id="homeDuelsCount">—</strong><span>Дуэлей</span></div>
-                <div class="home-stat"><strong id="homePlayersCount">—</strong><span>Игроков</span></div>
-                <div class="home-stat"><strong id="homeKitsCount">—</strong><span>Режимов</span></div>
-            </div>
-        </div>
-
-        <div class="home-hero-visual" aria-hidden="true">
-            <div class="home-visual-orbit home-visual-orbit-one"></div>
-            <div class="home-visual-orbit home-visual-orbit-two"></div>
-            <div class="home-feature-player">
-                <div class="home-feature-label"><span>Рейтинг активен</span><strong>ELO</strong></div>
-                <img class="home-feature-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
-                <div class="home-feature-footer"><span>Побеждай.</span><span>Поднимайся.</span></div>
-            </div>
-            <div class="home-floating-kit home-floating-kit-one"><img src="assets/logos/rvm.png" alt="" onerror="this.style.display='none';"><span>RVM</span></div>
-            <div class="home-floating-kit home-floating-kit-two"><img src="assets/logos/smp.png" alt="" onerror="this.style.display='none';"><span>SMP</span></div>
-            <div class="home-floating-rank"><small>Твой следующий ранг</small><strong>HT1</strong></div>
-        </div>
+        <button type="button" class="home-primary-btn" onclick="navigate('rating')">Смотреть рейтинг</button>
+        <div class="home-stats"><span><strong id="homePlayersCount">0</strong> игроков</span><span><strong id="homeDuelsCount">0</strong> дуэлей</span></div>
     </section>
 
     <section class="home-section" id="homeActivity" aria-labelledby="homeActivityTitle">
         <div class="home-section-header">
-            <div><span class="home-section-label">В реальном времени</span><h2 id="homeActivityTitle">Последние дуэли</h2></div>
-            <button type="button" class="home-text-btn" onclick="switchTab('duelsTab')">Все дуэли <span aria-hidden="true">→</span></button>
+            <h2 id="homeActivityTitle">Последние дуэли</h2>
+            <button type="button" class="home-text-btn" onclick="switchTab('duelsTab')">Все</button>
         </div>
-        <div class="home-results-list" id="homeRecentDuels"><div class="home-loading">Загрузка последних дуэлей...</div></div>
+        <div class="home-results-list" id="homeRecentDuels"></div>
     </section>
 
     <section class="home-section" id="homeLeaders" aria-labelledby="homeLeadersTitle">
         <div class="home-section-header">
-            <div><span class="home-section-label">Main Overall</span><h2 id="homeLeadersTitle">Лидеры рейтинга</h2></div>
-            <button type="button" class="home-text-btn" onclick="openHomeMode('kits', 'all')">Весь топ <span aria-hidden="true">→</span></button>
+            <h2 id="homeLeadersTitle">Топ игроков</h2>
+            <button type="button" class="home-text-btn" onclick="openHomeMode('kits', 'all')">Весь топ</button>
         </div>
-        <div class="home-leaders-list" id="homeTopPlayers"><div class="home-loading">Загрузка рейтинга...</div></div>
+        <div class="home-leaders-list" id="homeTopPlayers"></div>
     </section>
 
     <section class="home-section home-modes-section" id="homeModes" aria-labelledby="homeModesTitle">
-        <div class="home-section-header">
-            <div><span class="home-section-label">Выбери дисциплину</span><h2 id="homeModesTitle">Режимы</h2></div>
-        </div>
-        <div class="home-mode-group">
-            <h3>Kits <span>Main + Sub</span></h3>
-            <div class="home-mode-grid" id="homeKitsGrid"></div>
-        </div>
-        <div class="home-mode-group">
-            <h3>Games <span>Мини-игры</span></h3>
-            <div class="home-mode-grid" id="homeGamesGrid"></div>
-        </div>
+        <div class="home-section-header"><h2 id="homeModesTitle">Режимы</h2></div>
+        <h3 class="home-group-title">Kits</h3>
+        <div class="home-mode-grid" id="homeKitsGrid"></div>
+        <h3 class="home-group-title">Games</h3>
+        <div class="home-mode-grid" id="homeGamesGrid"></div>
     </section>
 
-    <section class="home-start" aria-labelledby="homeStartTitle">
-        <div><span class="home-section-label">Готов к первой дуэли?</span><h2 id="homeStartTitle">Войди в игру и начни подъем.</h2><p>Результат засчитывается автоматически, а рейтинг обновляется после каждого боя.</p></div>
-        <div class="home-start-actions">
-            <button type="button" class="home-primary-btn" onclick="switchTab('testingTab')">Как начать <span aria-hidden="true">→</span></button>
-            <a class="home-secondary-btn" href="https://t.me/MultiCraftCISTiers" target="_blank" rel="noopener">Telegram</a>
-        </div>
-    </section>
+    <div class="home-footer-actions">
+        <button type="button" class="home-ghost-btn" onclick="switchTab('testingTab')">Как играть</button>
+        <a class="home-ghost-btn" href="https://t.me/MultiCraftCISTiers" target="_blank" rel="noopener">Telegram</a>
+    </div>
+</div>
 
-    <div class="hero" id="leaderboard">
+<div id="boardScreen" hidden>
+<div class="hero" id="leaderboard">
+        <div class="board-top">
+        <button type="button" class="back-btn" onclick="navigate('')" aria-label="На главную">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <nav class="sys-tabs" aria-label="Система рейтинга">
             <a class="sys-tab active" href="index.html" aria-current="page">Elo</a>
             <a class="sys-tab" href="classic.html">PTS</a>
         </nav>
+        </div>
 
         <div class="ctrl-row">
             <div class="seg" role="group" aria-label="Тип рейтинга">
@@ -204,7 +179,8 @@
         <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
         <div class="players-list" id="playersList"></div>
     </div>
-</div>
+</div><!-- /boardScreen -->
+</div><!-- /mainPage -->
 
 <!-- ============================================================
      ВКЛАДКА "ДУЭЛИ" — глобальный лог всех дуэлей по всем игрокам
@@ -942,8 +918,8 @@
     <button type="button" class="sheet-done" onclick="closeFilterSheet()">Готово</button>
 </div>
 
-<script src="js/config.js?v=3.5.0"></script>
-<script src="js/demo-data.js?v=3.5.0"></script>
-<script src="js/main.js?v=3.5.0"></script>
+<script src="js/config.js?v=3.6.0"></script>
+<script src="js/demo-data.js?v=3.6.0"></script>
+<script src="js/main.js?v=3.6.0"></script>
 </body>
 </html>
