@@ -1261,9 +1261,116 @@ async function fetchPlayersFromApi(timeoutMs) {
     }
 }
 
+// ==========================================
+// ГЛАВНАЯ СТРАНИЦА: обзор Elo, последние дуэли и переходы к режимам
+// ==========================================
+
+function scrollToLeaderboard() {
+    const board = document.getElementById('leaderboard');
+    if (!board) return;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    board.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+}
+
+function submitHomeSearch(event) {
+    if (event) event.preventDefault();
+    const homeInput = document.getElementById('homeSearchInput');
+    const searchInput = document.getElementById('searchInput');
+    const searchRow = document.getElementById('searchRow');
+    const searchToggle = document.getElementById('searchToggle');
+    const query = homeInput ? homeInput.value.trim() : '';
+    if (searchInput) searchInput.value = query;
+    if (searchRow) searchRow.removeAttribute('hidden');
+    if (searchToggle) searchToggle.classList.add('active');
+    renderPlayers();
+    scrollToLeaderboard();
+}
+
+function openHomeMode(mode, value) {
+    setEloMode(mode);
+    setBoardFilter(value);
+    scrollToLeaderboard();
+}
+
+function homeModeCardHTML(mode, value, label, iconSrc) {
+    const icon = iconSrc
+        ? `<img src="${escapeHTML(iconSrc)}" alt="" onerror="this.style.display='none';">`
+        : `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<button type="button" class="home-mode-card" onclick="openHomeMode('${mode}', '${escapeHTML(value)}')">${icon}<span>${escapeHTML(label)}</span><span class="home-mode-arrow" aria-hidden="true">↗</span></button>`;
+}
+
+function renderHomeModeCards() {
+    const kitsGrid = document.getElementById('homeKitsGrid');
+    const gamesGrid = document.getElementById('homeGamesGrid');
+    const images = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const gamesImages = (typeof gameImages !== 'undefined') ? gameImages : {};
+    const kits = [...((typeof maintiers !== 'undefined') ? maintiers : []), ...((typeof subtiers !== 'undefined') ? subtiers : [])];
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    if (kitsGrid) kitsGrid.innerHTML = homeModeCardHTML('kits', 'all', 'Overall', '') + kits.map(kit => homeModeCardHTML('kits', kit, kit, images[kit])).join('');
+    if (gamesGrid) gamesGrid.innerHTML = homeModeCardHTML('games', 'all', 'All Games', '') + games.map(game => homeModeCardHTML('games', game, game, gamesImages[game])).join('');
+}
+
+function renderHome() {
+    const recentContainer = document.getElementById('homeRecentDuels');
+    const leadersContainer = document.getElementById('homeTopPlayers');
+    const playersCount = document.getElementById('homePlayersCount');
+    const duelsCount = document.getElementById('homeDuelsCount');
+    const kitsCount = document.getElementById('homeKitsCount');
+    const kits = [...((typeof maintiers !== 'undefined') ? maintiers : []), ...((typeof subtiers !== 'undefined') ? subtiers : [])];
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    if (kitsCount) kitsCount.textContent = String(kits.length + games.length);
+
+    if (typeof players === 'undefined' || !Array.isArray(players)) {
+        if (recentContainer) recentContainer.innerHTML = '<div class="home-loading">Загрузка последних дуэлей...</div>';
+        if (leadersContainer) leadersContainer.innerHTML = '<div class="home-loading">Загрузка рейтинга...</div>';
+        return;
+    }
+
+    const duels = collectGlobalDuels().sort((a, b) => duelSortKey(b).localeCompare(duelSortKey(a)));
+    if (playersCount) playersCount.textContent = String(players.length);
+    if (duelsCount) duelsCount.textContent = String(duels.length);
+
+    if (recentContainer) {
+        recentContainer.innerHTML = duels.length ? duels.slice(0, 5).map(duel => {
+            const rating = duel.winnerSide && typeof duel.winnerSide.eloAfter === 'number' ? getTierByElo(duel.winnerSide.eloAfter) : 'Unranked';
+            const color = tierColorOf(rating, '#8892b0');
+            const delta = duel.winnerSide ? formatDelta(duel.winnerSide.delta) : '';
+            return `<article class="home-result-row">
+                <div class="home-result-kit"><img src="${escapeHTML((typeof kitImages !== 'undefined' && kitImages[duel.kit]) || '')}" alt="" onerror="this.style.display='none';"></div>
+                <div class="home-result-main">
+                    <div class="home-result-names"><button type="button" class="home-player-link" ${profileOnClick(duel.winnerName)}>${escapeHTML(duel.winnerName)}</button><span>победил</span><button type="button" class="home-player-link home-player-link-muted" ${profileOnClick(duel.loserName)}>${escapeHTML(duel.loserName)}</button></div>
+                    <div class="home-result-meta">${escapeHTML(duel.kit)} · ${escapeHTML(formatDuelTime(duel))}</div>
+                </div>
+                <div class="home-result-rank" style="color:${color};border-color:${color}55;background:${color}11;"><strong>${rating}</strong><span>${delta}</span></div>
+            </article>`;
+        }).join('') : '<div class="home-empty">После первых ранговых дуэлей здесь появятся результаты.</div>';
+    }
+
+    const mainKits = (typeof maintiers !== 'undefined') ? maintiers : [];
+    const leaders = players
+        .filter(player => mainKits.some(kit => getCleanTier(player, kit) !== 'Unranked'))
+        .sort((a, b) => (calcOverallElo(b, mainKits) - calcOverallElo(a, mainKits)) || a.name.localeCompare(b.name))
+        .slice(0, 5);
+
+    if (leadersContainer) {
+        leadersContainer.innerHTML = leaders.length ? leaders.map((player, index) => {
+            const averageTier = calcAverageTier(player);
+            const retired = hasAnyRetiredKit(player);
+            return `<button type="button" class="home-leader-row" ${profileOnClick(player.name)}>
+                <span class="home-leader-position home-leader-position-${index + 1}">${index + 1}</span>
+                <img class="home-leader-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
+                <span class="home-leader-info"><strong>${escapeHTML(player.name)}</strong><span>${escapeHTML(player.region || '?')}</span></span>
+                <span class="home-leader-tier">${getTierBadge(averageTier, retired)}</span>
+                <span class="home-leader-elo"><strong>${calcOverallElo(player, mainKits)}</strong><span>Elo</span></span>
+            </button>`;
+        }).join('') : '<div class="home-empty">Лидеры появятся после первых ранговых дуэлей.</div>';
+    }
+}
+
 function renderAllViews() {
     renderPlayers();
     renderGlobalDuels();
+    renderHome();
 }
 
 // Загружает данные. isInitial - первая загрузка (длинный таймаут, при сбое
@@ -1360,6 +1467,8 @@ function initSite() {
     trimTransparentImage(DEFAULT_SKIN_SRC).then(src => {
         if (src !== window.overallSkinSrc) { window.overallSkinSrc = src; renderPlayers(); }
     });
+    renderHomeModeCards();
+    renderHome();
     renderPlayers();   // покажет "Загрузка..." до прихода данных
     if (!playersLoadStarted) {
         playersLoadStarted = true;
