@@ -42,9 +42,9 @@ function toggleTheme() {
 // ДАННЫЕ ИГРОКОВ
 // ==========================================
 // Список игроков приходит с сервера бота (GET /api/players), а не из файла.
-// players === undefined, пока данные не загружены. Объявлено здесь, до
+// eloPlayers === undefined, пока данные не загружены. Объявлено здесь, до
 // остального кода: чтение переменной до её объявления вызывает ошибку.
-let players;
+let eloPlayers;
 let playersUpdatedAt = null;     // время последнего снимка на сервере (чтобы не перерисовывать зря)
 let playersLoadStarted = false;
 let playersLoading = false;
@@ -217,11 +217,11 @@ function isTester(playerName) {
 
 // Открытие профиля игрока по имени (карточки в топе, дуэли, Доска почета)
 function openProfileByName(playerName) {
-    if (typeof players === 'undefined' || !Array.isArray(players)) {
+    if (typeof eloPlayers === 'undefined' || !Array.isArray(eloPlayers)) {
         console.warn('База игроков ещё не загружена.');
         return;
     }
-    const found = players.find(p => p.name && p.name.toLowerCase() === String(playerName).toLowerCase());
+    const found = eloPlayers.find(p => p.name && p.name.toLowerCase() === String(playerName).toLowerCase());
     if (!found) {
         console.warn(`Игрок "${playerName}" не найден в базе.`);
         return;
@@ -235,7 +235,9 @@ function openProfileByName(playerName) {
 
 // Строка кита в профиле: иконка, название, ранг и Elo
 function buildKitRowHTML(player, kit) {
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const activeKitImages = (typeof miniGames !== 'undefined' && miniGames.includes(kit))
+        ? ((typeof gameImages !== 'undefined') ? gameImages : {})
+        : ((typeof kitImages !== 'undefined') ? kitImages : {});
     const rating = getKitRating(player, kit);
     const eloText = rating.elo !== null ? `${formatElo(rating)} Elo` : '';
     return `<div class="modal-row">
@@ -253,6 +255,14 @@ function buildKitRowHTML(player, kit) {
 // Открытие детального профиля игрока в модальном окне
 function showProfile(player) {
     try {
+        const mainBlock = document.getElementById('modalMainBlock');
+        const subBlock = document.getElementById('modalSubBlock');
+        if (mainBlock) mainBlock.style.display = '';
+        if (subBlock) subBlock.style.display = '';
+        const mainTitle = document.getElementById('modalMainTitle');
+        const subTitle = document.getElementById('modalSubTitle');
+        if (mainTitle) mainTitle.textContent = 'Main Tiers';
+        if (subTitle) subTitle.textContent = 'Sub Tiers';
         const modalName = document.getElementById('modalPlayerName');
         if (modalName) modalName.textContent = player.name;
 
@@ -308,6 +318,31 @@ function showProfile(player) {
     }
 }
 
+function openGameProfileByName(playerName) {
+    if (!Array.isArray(eloPlayers)) return;
+    const found = eloPlayers.find(p => p.name && p.name.toLowerCase() === String(playerName).toLowerCase());
+    if (!found) return;
+    showGameProfile(found);
+}
+
+function showGameProfile(player) {
+    const view = toGameView(player);
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    document.getElementById('modalPlayerName').textContent = player.name;
+    const target = window.currentGameFilter || 'all';
+    const tier = target === 'all' ? calcAverageTierOver(view, games) : getCleanTier(view, target);
+    const retired = target === 'all' ? hasAnyRetiredKit(view, games) : isKitRetired(view, target);
+    const meta = `<span class="player-meta-tag">${escapeHTML(player.region || '?')}</span>${tier !== 'Unranked' ? getMetaTierTag(tier, retired) : ''}`;
+    document.getElementById('modalPlayerMeta').innerHTML = `<div class="player-meta-box" style="justify-content:flex-start;margin-top:5px;gap:6px;">${meta}</div>`;
+    document.getElementById('modalRoleContainer').innerHTML = isTester(player.name) ? '<span class="custom-role-badge">Tester</span>' : '';
+    document.getElementById('modalMainTitle').textContent = 'Games';
+    document.getElementById('modalMainRows').innerHTML = games.map(game => buildKitRowHTML(view, game)).join('');
+    document.getElementById('modalMainTotal').textContent = `Всего Elo за Games: ${calcOverallElo(view, games)}`;
+    document.getElementById('modalSubBlock').style.display = 'none';
+    document.getElementById('modalDuelsRows').innerHTML = renderDuelsList(player.matchHistory, { showKit: true });
+    document.getElementById('profileModal').classList.add('active');
+}
+
 // Закрытие модального окна профиля
 function closeModal() {
     const modal = document.getElementById('profileModal');
@@ -349,21 +384,35 @@ function sortedKitRatings(player, kits) {
 }
 
 // ==========================================
-// РЕЖИМЫ: Kits (киты) / Games (мини-игры)
+// ГЛОБАЛЬНАЯ НАВИГАЦИЯ: Kits = PTS, Games = Elo
 // ==========================================
 
-window.eloMode = 'kits';
+window.activeRating = 'kits';
 window.currentGameFilter = 'all';
+window.currentGameRegion = 'all';
+window.gameSearch = '';
+window.gameShowRetired = true;
 
-function setEloMode(mode) {
-    window.eloMode = (mode === 'games') ? 'games' : 'kits';
-    document.querySelectorAll('[data-elo-mode]').forEach(btn => {
-        const active = btn.getAttribute('data-elo-mode') === window.eloMode;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-    });
-    renderChips();
-    renderPlayers();
+function crownSVG(className = 'chip-crown') {
+    return `<svg class="${className}" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 7 4 4 5-7 5 7 4-4-2 11H5L3 7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+}
+
+function rankHTML(position) {
+    return `<span class="player-rank${position <= 5 ? ' player-rank-premium' : ''}">${position <= 5 ? crownSVG('rank-crown') : ''}<span>#${position}</span></span>`;
+}
+
+function openRating(system, filter = 'all') {
+    const target = system === 'games' ? 'games' : 'kits';
+    window.activeRating = target;
+    if (target === 'games') window.currentGameFilter = filter;
+    else if (window.PTS) window.PTS.setKitFilter(filter, false);
+    navigate(target);
+}
+
+function setRatingSystem(system) {
+    const target = system === 'games' ? 'games' : 'kits';
+    const filter = target === 'games' ? (window.currentGameFilter || 'all') : (window.PTS ? window.PTS.getKitFilter() : 'all');
+    openRating(target, filter);
 }
 
 function pluralPlayers(n) {
@@ -380,37 +429,33 @@ function pluralPlayers(n) {
 const REGION_CODES = ['RU', 'UA', 'BY', 'KZ', 'UZ', 'KG', 'AM', 'AZ', 'MD', 'TJ'];
 
 function chipHTML(value, label, iconSrc, active, handler) {
-    const icon = iconSrc ? `<img src="${escapeHTML(iconSrc)}" onerror="this.style.display='none'" alt="">` : '';
-    return `<button type="button" class="chip${active ? ' active' : ''}" data-v="${escapeHTML(value)}" onclick="${handler}">${icon}<span>${escapeHTML(label)}</span></button>`;
+    const icon = iconSrc === 'crown'
+        ? crownSVG()
+        : (iconSrc ? `<img src="${escapeHTML(iconSrc)}" onerror="this.style.display='none'" alt="">` : '');
+    return `<button type="button" role="tab" aria-selected="${active}" class="chip${active ? ' active' : ''}" data-v="${escapeHTML(value)}" onclick="${handler}">${icon}<span>${escapeHTML(label)}</span></button>`;
+}
+
+// Тег ранга (тот же размер, что у тега региона); Retired - красная R
+function ovTierTagHTML(tier, retired) {
+    if (tier === 'Unranked') return '<span class="ov-tag" style="color:#8892b0;">\u2014</span>';
+    const clr = tierColorOf(tier, '#8892b0');
+    return `<span class="ov-tag" style="color:${clr};border-color:${tierColorOf(tier, '#444b66')}99;">${retired ? '<span class="ov-r">R</span>' : ''}${tier}</span>`;
 }
 
 function renderChips() {
-    const row = document.getElementById('chipsRow');
+    const row = document.getElementById('gamesChipsRow');
     if (!row) return;
-    let html;
-    if (window.eloMode === 'games') {
-        const games = (typeof miniGames !== 'undefined') ? miniGames : [];
-        const images = (typeof gameImages !== 'undefined') ? gameImages : {};
-        const active = window.currentGameFilter || 'all';
-        html = chipHTML('all', 'All Games', '', active === 'all', 'setBoardFilter(this.dataset.v)') +
-            games.map(g => chipHTML(g, g, images[g], active === g, 'setBoardFilter(this.dataset.v)')).join('');
-    } else {
-        const kits = (typeof maintiers !== 'undefined') ? maintiers : [];
-        const subs = (typeof subtiers !== 'undefined') ? subtiers : [];
-        const images = (typeof kitImages !== 'undefined') ? kitImages : {};
-        const active = window.currentKitFilter || 'all';
-        html = chipHTML('all', 'Overall', '', active === 'all', 'setBoardFilter(this.dataset.v)') +
-            chipHTML('sub-all', 'Sub Overall', '', active === 'sub-all', 'setBoardFilter(this.dataset.v)') +
-            kits.concat(subs).map(k => chipHTML(k, k, images[k], active === k, 'setBoardFilter(this.dataset.v)')).join('');
-    }
-    row.innerHTML = html;
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    const images = (typeof gameImages !== 'undefined') ? gameImages : {};
+    const active = window.currentGameFilter || 'all';
+    row.innerHTML = chipHTML('all', 'All Games', 'crown', active === 'all', 'setBoardFilter(this.dataset.v)') +
+        games.map(g => chipHTML(g, g, images[g], active === g, 'setBoardFilter(this.dataset.v)')).join('');
     const activeChip = row.querySelector('.chip.active');
     if (activeChip) row.scrollLeft = Math.max(0, activeChip.offsetLeft - (row.clientWidth - activeChip.offsetWidth) / 2);
 }
 
 function setBoardFilter(value) {
-    if (window.eloMode === 'games') window.currentGameFilter = value;
-    else window.currentKitFilter = value;
+    window.currentGameFilter = value;
     renderChips();
     renderPlayers();
 }
@@ -421,36 +466,78 @@ function toggleSearch() {
     const btn = document.getElementById('searchToggle');
     if (!row) return;
     const open = row.hasAttribute('hidden');
-    if (open) {
-        row.removeAttribute('hidden');
-        if (input) input.focus();
-    } else {
-        row.setAttribute('hidden', '');
-        if (input) { input.value = ''; renderPlayers(); }
+    row.toggleAttribute('hidden', !open);
+    if (open && input) input.focus();
+    if (!open && input) {
+        input.value = '';
+        setActiveSearch('');
     }
     if (btn) btn.classList.toggle('active', open);
+}
+
+function setActiveSearch(value) {
+    if (window.activeRating === 'games') {
+        window.gameSearch = value;
+        renderPlayers();
+    } else if (window.PTS) {
+        window.PTS.setSearch(value);
+    }
+}
+
+function currentActiveRegion() {
+    return window.activeRating === 'games'
+        ? (window.currentGameRegion || 'all')
+        : (window.PTS ? window.PTS.getRegion() : 'all');
 }
 
 function updateFilterBadge() {
     const badge = document.getElementById('filterBadge');
     const retired = document.getElementById('retiredToggle');
-    const count = ((window.currentRegionFilter || 'all') !== 'all' ? 1 : 0) + ((retired && !retired.checked) ? 1 : 0);
+    const count = (currentActiveRegion() !== 'all' ? 1 : 0) + ((retired && !retired.checked) ? 1 : 0);
     if (badge) { badge.textContent = String(count); badge.hidden = count === 0; }
 }
 
 function renderRegionChips() {
     const box = document.getElementById('regionChips');
     if (!box) return;
-    const active = window.currentRegionFilter || 'all';
-    box.innerHTML = chipHTML('all', '\u0412\u0441\u0435', '', active === 'all', 'setRegionFilter(this.dataset.v)') +
-        REGION_CODES.map(r => chipHTML(r, r, '', active === r, 'setRegionFilter(this.dataset.v)')).join('');
+    const active = currentActiveRegion();
+    const codes = window.activeRating === 'games' ? GAME_REGION_CODES : KIT_REGION_CODES;
+    box.innerHTML = chipHTML('all', 'Все', '', active === 'all', 'setRegionFilter(this.dataset.v)') +
+        codes.map(r => chipHTML(r, r, '', active === r, 'setRegionFilter(this.dataset.v)')).join('');
+    const label = document.getElementById('regionSheetLabel');
+    if (label) label.textContent = window.activeRating === 'games' ? 'Регион мира' : 'Регион СНГ';
 }
 
 function setRegionFilter(value) {
-    window.currentRegionFilter = value;
+    if (window.activeRating === 'games') {
+        window.currentGameRegion = value;
+        renderPlayers();
+    } else if (window.PTS) {
+        window.PTS.setRegion(value);
+    }
     renderRegionChips();
     updateFilterBadge();
-    renderPlayers();
+}
+
+function syncRatingUI() {
+    const games = window.activeRating === 'games';
+    document.querySelectorAll('[data-rating]').forEach(btn => {
+        const active = btn.dataset.rating === window.activeRating;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    });
+    const kitsPanel = document.getElementById('kitsPanel');
+    const gamesPanel = document.getElementById('gamesPanel');
+    if (kitsPanel) kitsPanel.hidden = games;
+    if (gamesPanel) gamesPanel.hidden = !games;
+    const input = document.getElementById('searchInput');
+    if (input) input.value = games ? window.gameSearch : (window.PTS ? window.PTS.getSearch() : '');
+    const retired = document.getElementById('retiredToggle');
+    if (retired) retired.checked = games ? window.gameShowRetired : (window.PTS ? window.PTS.getRetired() : true);
+    if (games) { renderChips(); renderPlayers(); }
+    else if (window.PTS) window.PTS.renderAll();
+    renderRegionChips();
+    updateFilterBadge();
 }
 
 function openFilterSheet() {
@@ -459,6 +546,8 @@ function openFilterSheet() {
     const back = document.getElementById('filterBackdrop');
     if (sheet) sheet.removeAttribute('hidden');
     if (back) back.removeAttribute('hidden');
+    const done = sheet && sheet.querySelector('.sheet-done');
+    if (done) done.focus();
 }
 
 function closeFilterSheet() {
@@ -523,158 +612,106 @@ function trimTransparentImage(src) {
     });
 }
 
+function gameProfileOnClick(name) {
+    const encoded = encodeURIComponent(String(name)).replace(/'/g, '%27');
+    return `onclick="openGameProfileByName(decodeURIComponent('${encoded}'))"`;
+}
+
 function renderPlayers() {
-    const list = document.getElementById('playersList');
+    const list = document.getElementById('gamesPlayersList');
     if (!list) return;
 
-    const searchInput = document.getElementById('searchInput');
-    const search = searchInput ? searchInput.value.toLowerCase() : '';
-    const region = window.currentRegionFilter || 'all';
-    const retiredToggle = document.getElementById('retiredToggle');
-    const showRetiredInPlace = retiredToggle ? retiredToggle.checked : true;
-    const gamesMode = window.eloMode === 'games';
-    const targetKit = gamesMode ? (window.currentGameFilter || 'all') : (window.currentKitFilter || 'all');
-    const isOverall = gamesMode ? (targetKit === 'all') : (targetKit === 'all' || targetKit === 'sub-all');
+    const search = String(window.gameSearch || '').toLowerCase();
+    const region = window.currentGameRegion || 'all';
+    const showRetiredInPlace = window.gameShowRetired !== false;
+    const targetGame = window.currentGameFilter || 'all';
+    const isOverall = targetGame === 'all';
+    const games = (typeof miniGames !== 'undefined') ? miniGames : [];
+    const images = (typeof gameImages !== 'undefined') ? gameImages : {};
+    const subtitleEl = document.getElementById('gamesTableSubtitle');
+    const countEl = document.querySelector('#gamesPlayerCount strong');
+    const boardLabel = isOverall ? 'Games Overall' : targetGame;
+    if (subtitleEl) subtitleEl.textContent = boardLabel;
 
-    if (typeof players === 'undefined' || !Array.isArray(players)) {
+    if (typeof eloPlayers === 'undefined' || !Array.isArray(eloPlayers)) {
         list.innerHTML = loadStatusHTML();
+        if (countEl) countEl.textContent = '0';
         return;
     }
 
-    // В режиме Games работаем с "играми" вместо китов
-    const sourcePlayers = gamesMode ? players.map(toGameView) : players;
-
-    // Название списка (число игроков дописывается ниже, когда список отфильтрован)
-    let boardLabel;
-    if (gamesMode && targetKit === 'all') boardLabel = 'Games Overall';
-    else if (targetKit === 'all') boardLabel = 'Main Overall';
-    else if (targetKit === 'sub-all') boardLabel = 'Sub Overall';
-    else boardLabel = targetKit;
-
-    const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
-    const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const activeKitImages = gamesMode
-        ? ((typeof gameImages !== 'undefined') ? gameImages : {})
-        : ((typeof kitImages !== 'undefined') ? kitImages : {});
-    const overallKits = gamesMode
-        ? ((typeof miniGames !== 'undefined') ? miniGames : [])
-        : ((targetKit === 'sub-all') ? activeSubtiers : activeMaintiers);
-
-    // В топ попадают только игроки, у которых есть рейтинг в выбранном ките
-    // (или хотя бы в одном ките выбранной группы Main/Sub).
+    const sourcePlayers = eloPlayers.map(toGameView);
     let filtered = sourcePlayers.filter(player => {
         const matchesSearch = (player.name || '').toLowerCase().includes(search);
-        const matchesRegion = (region === 'all' || player.region === region);
+        const matchesRegion = region === 'all' || player.region === region;
         if (!matchesSearch || !matchesRegion) return false;
-
         if (!isOverall) {
-            if (!showRetiredInPlace && isKitRetired(player, targetKit)) return false;
-            return getCleanTier(player, targetKit) !== 'Unranked';
+            if (!showRetiredInPlace && isKitRetired(player, targetGame)) return false;
+            return getCleanTier(player, targetGame) !== 'Unranked';
         }
-        // Общий топ: игрок с Retired-китом (main / игры) без тумблера скрыт, как в Classic PTS
-        if (!showRetiredInPlace && hasAnyRetiredKit(player, gamesMode ? overallKits : null)) return false;
-        return overallKits.some(kit => getCleanTier(player, kit) !== 'Unranked');
+        if (!showRetiredInPlace && hasAnyRetiredKit(player, games)) return false;
+        return games.some(game => getCleanTier(player, game) !== 'Unranked');
     });
 
     if (isOverall) {
-        filtered.sort((a, b) =>
-            (calcOverallElo(b, overallKits) - calcOverallElo(a, overallKits)) || a.name.localeCompare(b.name));
+        filtered.sort((a, b) => (calcOverallElo(b, games) - calcOverallElo(a, games)) || a.name.localeCompare(b.name));
     } else {
-        const eloOf = (p) => getEffectiveElo(getKitRating(p, targetKit)) || 0;
+        const eloOf = p => getEffectiveElo(getKitRating(p, targetGame)) || 0;
         filtered.sort((a, b) => (eloOf(b) - eloOf(a)) || a.name.localeCompare(b.name));
     }
 
-    list.innerHTML = '';
-
+    if (countEl) countEl.textContent = String(filtered.length);
     if (filtered.length === 0) {
-        if (gamesMode && !players.some(p => p.games && Object.keys(p.games).length)) {
-            list.innerHTML = '<div style="text-align:center;color:#8892b0;padding:30px 20px;line-height:1.5;">Рейтинг мини-игр появится позже.<br>Здесь будут ранги за BedWars, SkyWars, Sumo и другие игры.</div>';
-            return;
-        }
-        list.innerHTML = players.length === 0
-            ? '<div style="text-align:center;color:#8892b0;padding:30px 20px;line-height:1.5;">Elo-система только запущена.<br>Игроки появятся после первых ранговых дуэлей.</div>'
-            : '<div style="text-align:center;color:#8892b0;padding:20px;">Игроки не найдены</div>';
+        const hasAnyGames = eloPlayers.some(p => p.games && Object.keys(p.games).length);
+        list.innerHTML = !hasAnyGames
+            ? '<div class="board-empty">Рейтинг мини-игр появится после первых матчей.</div>'
+            : '<div class="board-empty">Игроки не найдены</div>';
         return;
     }
 
-    const subtitleEl = document.getElementById('tableSubtitle');
-    if (subtitleEl) subtitleEl.textContent = `${boardLabel} \u00b7 ${filtered.length} ${pluralPlayers(filtered.length)}`;
-
     let htmlFragment = '';
-
     filtered.forEach((player, index) => {
-        const rankPrefix = `#${index + 1}`;
+        const position = index + 1;
         const nameHTML = escapeHTML(player.name);
         const regionHTML = `<span class="player-meta-tag">${escapeHTML(player.region || '?')}</span>`;
+        let topClass = index < 5 ? `top-rank-${position}` : '';
+        const isRet = isOverall ? hasAnyRetiredKit(player, games) : isKitRetired(player, targetGame);
+        if (isRet) topClass = `${topClass} retired-status`.trim();
 
-        let topClass = '';
-        if (index < 5) topClass = `top-rank-${index + 1}`;
-
-        // Retired: карточка приглушается (кроме топ-5), как в Classic PTS
-        const isRet = isOverall
-            ? hasAnyRetiredKit(player, gamesMode ? overallKits : null)
-            : isKitRetired(player, targetKit);
-        if (isRet) topClass = topClass ? topClass + ' retired-status' : 'retired-status';
-
-        // Карточка топа по конкретному киту: скин слева, справа ранг в топе,
-        // ник, ниже - регион, ранг на ките и Elo.
         if (!isOverall) {
-            const rating = getKitRating(player, targetKit);
+            const rating = getKitRating(player, targetGame);
             htmlFragment += `
-            <div class="player-container player-container-bust ${topClass}">
-                <div class="player-card-row player-card-row-bust" ${profileOnClick(player.name)}>
-                    <img class="bust-card-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
-
-                    <div class="bust-card-info">
-                        <div class="bust-card-top">
-                            <span class="player-rank">${rankPrefix}</span>
-                            <span class="player-name">${nameHTML}</span>
-                        </div>
-                        <div class="bust-card-bottom">
-                            ${regionHTML}
-                            ${getTierBadge(rating.tier, rating.retired)}
-                            <span class="bust-elo-badge" title="Elo на этом ките">${formatElo(rating)} Elo</span>
-                        </div>
+                <div class="player-container ov-card premium-game-card ${topClass}" ${gameProfileOnClick(player.name)}>
+                    <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
+                    <div class="ov-body">
+                        <div class="ov-title">${rankHTML(position)}<span class="player-name">${nameHTML}</span></div>
+                        <div class="ov-elo"><strong>${formatElo(rating)} Elo</strong></div>
+                        <div class="ov-tags">${ovTierTagHTML(rating.tier, rating.retired)}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
                     </div>
-                </div>
-            </div>`;
+                </div>`;
             return;
         }
 
-        // Общий топ (Main/Sub): слева скин, справа место и ник, ниже регион и
-        // средний ранг, ниже плитки рангов открытой вкладки (Main или Sub) -
-        // их можно листать по горизонтали.
-        const totalElo = calcOverallElo(player, overallKits);
-        const avgTier = gamesMode ? calcAverageTierOver(player, overallKits) : calcAverageTier(player);
+        const totalElo = calcOverallElo(player, games);
+        const avgTier = calcAverageTierOver(player, games);
         const avgClr = tierColorOf(avgTier, '#8892b0');
         const avgTierHTML = avgTier !== 'Unranked'
             ? `<span class="ov-tag" style="color:${avgClr};border-color:${tierColorOf(avgTier, '#444b66')}99;">${isRet ? '<span class="ov-r">R</span>' : ''}${avgTier}</span>`
-            : `<span class="ov-tag" style="color:#8892b0;">-</span>`;
-        const tilesHTML = sortedKitRatings(player, overallKits)
+            : `<span class="ov-tag" style="color:#8892b0;">—</span>`;
+        const tilesHTML = sortedKitRatings(player, games)
             .map(x => (!showRetiredInPlace && x.rating.retired)
-                ? ovTileHTML(x.kit, { elo: null, tier: 'Unranked', retired: false }, activeKitImages)
-                : ovTileHTML(x.kit, x.rating, activeKitImages)).join('');
-
+                ? ovTileHTML(x.kit, { elo: null, tier: 'Unranked', retired: false }, images)
+                : ovTileHTML(x.kit, x.rating, images)).join('');
         htmlFragment += `
-        <div class="player-container ov-card ${topClass}" ${profileOnClick(player.name)}>
-            <div class="ov-skin-wrap">
-                <img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';">
-            </div>
+        <div class="player-container ov-card ${topClass}" ${gameProfileOnClick(player.name)}>
+            <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
             <div class="ov-body">
-                <div class="ov-title">
-                    <span class="player-rank">${rankPrefix}</span>
-                    <span class="player-name">${nameHTML}</span>
-                </div>
+                <div class="ov-title">${rankHTML(position)}<span class="player-name">${nameHTML}</span></div>
                 <div class="ov-elo">${totalElo} Elo</div>
-                <div class="ov-tags">
-                    ${avgTierHTML}
-                    <span class="ov-tag">${escapeHTML(player.region || '?')}</span>
-                </div>
-                <div class="ov-scroll" aria-label="Ранги по китам, листайте вправо">${tilesHTML}</div>
+                <div class="ov-tags">${avgTierHTML}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
+                <div class="ov-scroll" aria-label="Ранги по играм">${tilesHTML}</div>
             </div>
         </div>`;
     });
-
     list.innerHTML = htmlFragment;
 }
 
@@ -729,7 +766,7 @@ function showTab(tabId) {
         const isBoard = tabId === 'boardTab';
         if (homeScreen) homeScreen.hidden = isBoard;
         if (boardScreen) boardScreen.hidden = !isBoard;
-        renderPlayers();
+        if (isBoard) syncRatingUI();
         renderHome();
     } else {
         const target = document.getElementById(tabId);
@@ -748,8 +785,8 @@ function showTab(tabId) {
 // МАРШРУТЫ: адрес после # -> экран. Работает кнопка "Назад" браузера.
 // "" - главная, #rating - рейтинг, #duels, #start, #info - разделы
 // ==========================================
-const ROUTE_TO_TAB = { '': 'mainPage', rating: 'boardTab', duels: 'duelsTab', start: 'testingTab', info: 'otherInfoTab' };
-const TAB_TO_ROUTE = { mainPage: '', boardTab: 'rating', duelsTab: 'duels', testingTab: 'start', otherInfoTab: 'info' };
+const ROUTE_TO_TAB = { '': 'mainPage', kits: 'boardTab', games: 'boardTab', rating: 'boardTab', duels: 'duelsTab', start: 'testingTab', info: 'otherInfoTab' };
+const TAB_TO_ROUTE = { mainPage: '', boardTab: 'kits', duelsTab: 'duels', testingTab: 'start', otherInfoTab: 'info' };
 
 function currentRoute() {
     return location.hash.replace(/^#\/?/, '');
@@ -757,6 +794,8 @@ function currentRoute() {
 
 function applyRoute() {
     const route = currentRoute();
+    if (route === 'games') window.activeRating = 'games';
+    if (route === 'kits' || route === 'rating') window.activeRating = 'kits';
     showTab(ROUTE_TO_TAB.hasOwnProperty(route) ? ROUTE_TO_TAB[route] : 'mainPage');
 }
 
@@ -902,7 +941,7 @@ if (menuBtn && sidebar) {
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
 
-    if (searchInput) searchInput.addEventListener('input', renderPlayers);
+    if (searchInput) searchInput.addEventListener('input', () => setActiveSearch(searchInput.value));
 
     // Универсальная инициализация кастомного выпадающего списка.
     // onChangeCallback по умолчанию renderPlayers (главная страница);
@@ -957,7 +996,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Тумблер Retired
     const retiredToggleEl = document.getElementById('retiredToggle');
-    if (retiredToggleEl) retiredToggleEl.addEventListener('change', () => { updateFilterBadge(); renderPlayers(); });
+    if (retiredToggleEl) retiredToggleEl.addEventListener('change', () => {
+        if (window.activeRating === 'games') { window.gameShowRetired = retiredToggleEl.checked; renderPlayers(); }
+        else if (window.PTS) window.PTS.setRetired(retiredToggleEl.checked);
+        updateFilterBadge();
+    });
 
     // Фильтры на чипах: состояние по умолчанию и первая отрисовка ленты
     window.currentKitFilter = 'all';
@@ -1089,7 +1132,9 @@ function buildEloChangeHTML(eloBefore, eloAfter, delta) {
 }
 
 function buildKitHTML(kit) {
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
+    const activeKitImages = (typeof miniGames !== 'undefined' && miniGames.includes(kit))
+        ? ((typeof gameImages !== 'undefined') ? gameImages : {})
+        : ((typeof kitImages !== 'undefined') ? kitImages : {});
     return `<div class="duel-kit">
         <img class="duel-kit-icon" src="${activeKitImages[kit] || ''}" onerror="this.style.display='none';" alt="">
         <span>${escapeHTML(kit)}</span>
@@ -1100,11 +1145,11 @@ function buildKitHTML(kit) {
 // данных две записи (по одной у каждого участника) - склеиваем их по id
 // в одну, где известны обе стороны.
 function collectGlobalDuels() {
-    if (typeof players === 'undefined' || !Array.isArray(players)) return [];
+    if (typeof eloPlayers === 'undefined' || !Array.isArray(eloPlayers)) return [];
 
     const byKey = new Map();
 
-    players.forEach(player => {
+    eloPlayers.forEach(player => {
         const history = Array.isArray(player.matchHistory) ? player.matchHistory : [];
         history.forEach(raw => {
             if (!isNewFormatDuel(raw)) return;
@@ -1155,7 +1200,7 @@ function renderGlobalDuels() {
     const container = document.getElementById('globalDuelsList');
     if (!container) return;
 
-    if (typeof players === 'undefined' || !Array.isArray(players)) {
+    if (typeof eloPlayers === 'undefined' || !Array.isArray(eloPlayers)) {
         container.innerHTML = loadStatusHTML();
         return;
     }
@@ -1308,21 +1353,17 @@ function scrollToLeaderboard() {
 function submitHomeSearch(event) {
     if (event) event.preventDefault();
     const homeInput = document.getElementById('homeSearchInput');
-    const searchInput = document.getElementById('searchInput');
     const searchRow = document.getElementById('searchRow');
     const searchToggle = document.getElementById('searchToggle');
     const query = homeInput ? homeInput.value.trim() : '';
-    if (searchInput) searchInput.value = query;
+    if (window.PTS) window.PTS.setSearch(query);
     if (searchRow) searchRow.removeAttribute('hidden');
     if (searchToggle) searchToggle.classList.add('active');
-    renderPlayers();
-    scrollToLeaderboard();
+    openRating('kits', 'all');
 }
 
 function openHomeMode(mode, value) {
-    setEloMode(mode);
-    setBoardFilter(value);
-    scrollToLeaderboard();
+    openRating(mode === 'games' ? 'games' : 'kits', value);
 }
 
 function homeModeCardHTML(mode, value, label, iconSrc) {
@@ -1348,50 +1389,48 @@ function renderHome() {
     const leadersContainer = document.getElementById('homeTopPlayers');
     const playersCount = document.getElementById('homePlayersCount');
     const duelsCount = document.getElementById('homeDuelsCount');
+    const ptsPlayers = window.PTS ? window.PTS.getPlayers() : [];
+    if (playersCount) playersCount.textContent = String(ptsPlayers.length);
 
-    if (typeof players === 'undefined' || !Array.isArray(players)) {
-        if (recentContainer) recentContainer.innerHTML = '<div class="home-empty">Загрузка...</div>';
-        if (leadersContainer) leadersContainer.innerHTML = '<div class="home-empty">Загрузка...</div>';
-        return;
+    if (!Array.isArray(eloPlayers)) {
+        if (recentContainer) recentContainer.innerHTML = '<div class="home-empty">Загрузка Elo-дуэлей…</div>';
+        if (duelsCount) duelsCount.textContent = '0';
+    } else {
+        const duels = collectGlobalDuels().sort((a, b) => duelSortKey(b).localeCompare(duelSortKey(a)));
+        if (duelsCount) duelsCount.textContent = String(duels.length);
+        if (recentContainer) {
+            recentContainer.innerHTML = duels.length ? duels.slice(0, 5).map(duel => {
+                const rating = duel.winnerSide && typeof duel.winnerSide.eloAfter === 'number' ? getTierByElo(duel.winnerSide.eloAfter) : 'Unranked';
+                const color = tierColorOf(rating, '#8892b0');
+                const delta = duel.winnerSide ? formatDelta(duel.winnerSide.delta) : '';
+                const kitIcon = (typeof kitImages !== 'undefined' && kitImages[duel.kit]) || (typeof gameImages !== 'undefined' && gameImages[duel.kit]) || '';
+                return `<article class="home-result-row">
+                    <div class="home-result-kit"><img src="${escapeHTML(kitIcon)}" alt="" onerror="this.style.display='none';"></div>
+                    <div class="home-result-main">
+                        <div class="home-result-names"><button type="button" class="home-player-link" ${profileOnClick(duel.winnerName)}>${escapeHTML(duel.winnerName)}</button><span>→</span><button type="button" class="home-player-link home-player-link-muted" ${profileOnClick(duel.loserName)}>${escapeHTML(duel.loserName)}</button></div>
+                        <div class="home-result-meta">${escapeHTML(duel.kit)} · ${escapeHTML(formatDuelTime(duel))}</div>
+                    </div>
+                    <div class="home-result-rank" style="color:${color};border-color:${color}55;background:${color}11;"><strong>${rating}</strong><span>${delta}</span></div>
+                </article>`;
+            }).join('') : '<div class="home-empty">Пока нет Elo-дуэлей</div>';
+        }
     }
 
-    const duels = collectGlobalDuels().sort((a, b) => duelSortKey(b).localeCompare(duelSortKey(a)));
-    if (playersCount) playersCount.textContent = String(players.length);
-    if (duelsCount) duelsCount.textContent = String(duels.length);
-
-    if (recentContainer) {
-        recentContainer.innerHTML = duels.length ? duels.slice(0, 5).map(duel => {
-            const rating = duel.winnerSide && typeof duel.winnerSide.eloAfter === 'number' ? getTierByElo(duel.winnerSide.eloAfter) : 'Unranked';
-            const color = tierColorOf(rating, '#8892b0');
-            const delta = duel.winnerSide ? formatDelta(duel.winnerSide.delta) : '';
-            const kitIcon = (typeof kitImages !== 'undefined' && kitImages[duel.kit]) || '';
-            return `<article class="home-result-row">
-                <div class="home-result-kit"><img src="${escapeHTML(kitIcon)}" alt="" onerror="this.style.display='none';"></div>
-                <div class="home-result-main">
-                    <div class="home-result-names"><button type="button" class="home-player-link" ${profileOnClick(duel.winnerName)}>${escapeHTML(duel.winnerName)}</button><span>\u2192</span><button type="button" class="home-player-link home-player-link-muted" ${profileOnClick(duel.loserName)}>${escapeHTML(duel.loserName)}</button></div>
-                    <div class="home-result-meta">${escapeHTML(duel.kit)} \u00b7 ${escapeHTML(formatDuelTime(duel))}</div>
-                </div>
-                <div class="home-result-rank" style="color:${color};border-color:${color}55;background:${color}11;"><strong>${rating}</strong><span>${delta}</span></div>
-            </article>`;
-        }).join('') : '<div class="home-empty">Пока нет дуэлей</div>';
-    }
-
-    const mainKits = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const leaders = players
-        .filter(player => mainKits.some(kit => getCleanTier(player, kit) !== 'Unranked'))
-        .sort((a, b) => (calcOverallElo(b, mainKits) - calcOverallElo(a, mainKits)) || a.name.localeCompare(b.name))
+    const leaders = ptsPlayers
+        .filter(player => KIT_REGION_CODES.includes(player.region) && PTS.calcPoints(player, maintiers) > 0)
+        .sort((a, b) => (PTS.calcPoints(b, maintiers) - PTS.calcPoints(a, maintiers)) || a.name.localeCompare(b.name))
         .slice(0, 5);
-
     if (leadersContainer) {
         leadersContainer.innerHTML = leaders.length ? leaders.map((player, index) => {
-            const averageTier = calcAverageTier(player);
-            const retired = hasAnyRetiredKit(player);
-            return `<button type="button" class="home-leader-row" ${profileOnClick(player.name)}>
+            const averageTier = PTS.calcAverageTier(player);
+            const retired = PTS.hasAnyRetiredKit(player);
+            const encoded = encodeURIComponent(player.name).replace(/'/g, '%27');
+            return `<button type="button" class="home-leader-row" onclick="PTS.openProfileByName(decodeURIComponent('${encoded}'))">
                 <span class="home-leader-position home-leader-position-${index + 1}">${index + 1}</span>
                 <img class="home-leader-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';">
                 <span class="home-leader-info"><strong>${escapeHTML(player.name)}</strong><span>${escapeHTML(player.region || '?')}</span></span>
-                <span class="home-leader-tier">${getTierBadge(averageTier, retired)}</span>
-                <span class="home-leader-elo">${calcOverallElo(player, mainKits)}</span>
+                <span class="home-leader-tier">${PTS.getTierBadge(averageTier, retired)}</span>
+                <span class="home-leader-elo">${PTS.calcPoints(player, maintiers)}</span>
             </button>`;
         }).join('') : '<div class="home-empty">Пока нет игроков</div>';
     }
@@ -1411,7 +1450,7 @@ async function loadPlayers(isInitial) {
 
     // Демо-режим макета: показываем игроков из js/demo-data.js, к API не обращаемся
     if (typeof DEMO_MODE !== 'undefined' && DEMO_MODE && typeof demoPlayers !== 'undefined') {
-        players = demoPlayers;
+        eloPlayers = demoPlayers;
         playersLoadedAt = Date.now();
         playersLoadError = false;
         renderAllViews();
@@ -1421,8 +1460,8 @@ async function loadPlayers(isInitial) {
     // Beta Elo пока закрыта (см. BETA_SHOW_PLAYERS в config.js): список пустой,
     // к API не обращаемся.
     if (typeof BETA_SHOW_PLAYERS !== 'undefined' && !BETA_SHOW_PLAYERS) {
-        if (typeof players === 'undefined') {
-            players = [];
+        if (typeof eloPlayers === 'undefined') {
+            eloPlayers = [];
             playersLoadedAt = Date.now();
             renderAllViews();
         }
@@ -1434,7 +1473,7 @@ async function loadPlayers(isInitial) {
     let hintTimer = null;
     if (isInitial) {
         hintTimer = setTimeout(() => {
-            if (typeof players === 'undefined') {
+            if (typeof eloPlayers === 'undefined') {
                 playersSlowHint = true;
                 renderAllViews();
             }
@@ -1444,7 +1483,7 @@ async function loadPlayers(isInitial) {
     try {
         const data = await fetchPlayersFromApi(isInitial ? FIRST_LOAD_TIMEOUT_MS : REFRESH_TIMEOUT_MS);
         const changed = (data.updatedAt || null) !== playersUpdatedAt;
-        players = data.players;
+        eloPlayers = data.players;
         playersUpdatedAt = data.updatedAt || null;
         playersLoadedAt = Date.now();
         playersLoadError = false;
@@ -1453,7 +1492,7 @@ async function loadPlayers(isInitial) {
         return true;
     } catch (e) {
         console.warn('Не удалось загрузить данные игроков:', e);
-        if (typeof players === 'undefined') {
+        if (typeof eloPlayers === 'undefined') {
             playersLoadError = true;
             playersSlowHint = false;
             renderAllViews();
@@ -1480,11 +1519,11 @@ function startPlayersAutoRefresh() {
     const seconds = (typeof PLAYERS_REFRESH_SECONDS !== 'undefined') ? PLAYERS_REFRESH_SECONDS : 60;
 
     setInterval(() => {
-        if (!document.hidden && typeof players !== 'undefined') loadPlayers(false);
+        if (!document.hidden && typeof eloPlayers !== 'undefined') loadPlayers(false);
     }, seconds * 1000);
 
     document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && typeof players !== 'undefined' && Date.now() - playersLoadedAt > seconds * 1000) {
+        if (!document.hidden && typeof eloPlayers !== 'undefined' && Date.now() - playersLoadedAt > seconds * 1000) {
             loadPlayers(false);
         }
     });
