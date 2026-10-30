@@ -2,13 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="yandex-verification" content="9fd64b1c1badb957" />
     <title>MultiCraftCISTiers — Лидерборд PVP для мобильных игроков</title>
     <meta name="description" content="Официальный рейтинг мобильных игроков MultiCraft PVP. Проверь свой уровень, участвуй в тирах, занимай топовые позиции.">
     <meta name="keywords" content="MultiCraft PVP, лидерборд, тиры, мобильные игроки, MultiCraft, рейтинг, Hardcore, Manhunt">
     <meta name="author" content="MultiCraftCISTiers">
     <meta name="theme-color" content="#070b17">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23070b17'/%3E%3Cpath d='M13 20l10 9 9-17 9 17 10-9-5 29H18z' fill='%23f5c542'/%3E%3C/svg%3E">
     <meta property="og:title" content="MultiCraftCISTiers — PVP Leaderboard">
     <meta property="og:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft. Узнай свой рейтинг и соревнуйся с лучшими.">
     <meta property="og:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
@@ -19,7 +20,7 @@
     <meta name="twitter:description" content="Глобальный рейтинг мобильных PVP игроков MultiCraft.">
     <meta name="twitter:image" content="https://zor1kww.github.io/MultiCraftCISTiers/assets/og-image.png">
     <link rel="canonical" href="https://zor1kww.github.io/MultiCraftCISTiers/">
-    <link rel="stylesheet" href="css/style.css?v=3.6.0">
+    <link rel="stylesheet" href="css/style.css?v=4.1.0">
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -54,13 +55,13 @@
         </div>
         <div class="modal-body">
             <div class="modal-grid">
-                <div class="modal-block">
-                    <h4>Main Tiers</h4>
+                <div class="modal-block" id="modalMainBlock">
+                    <h4 id="modalMainTitle">Main Tiers</h4>
                     <div id="modalMainRows"></div>
                     <div class="modal-block-footer" id="modalMainTotal">Всего Elo за Main: 0</div>
                 </div>
-                <div class="modal-block">
-                    <h4>Sub Tiers</h4>
+                <div class="modal-block" id="modalSubBlock">
+                    <h4 id="modalSubTitle">Sub Tiers</h4>
                     <div id="modalSubRows"></div>
                     <div class="modal-block-footer" id="modalSubTotal">Всего Elo за Sub: 0</div>
                 </div>
@@ -110,7 +111,7 @@
             <button type="submit" aria-label="Найти"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         </form>
 
-        <button type="button" class="home-primary-btn" onclick="navigate('rating')">Смотреть рейтинг</button>
+        <button type="button" class="home-primary-btn" onclick="openRating('kits', 'all')">Смотреть рейтинг</button>
         <div class="home-stats"><span><strong id="homePlayersCount">0</strong> игроков</span><span><strong id="homeDuelsCount">0</strong> дуэлей</span></div>
     </section>
 
@@ -150,23 +151,16 @@
         <button type="button" class="back-btn" onclick="navigate('')" aria-label="На главную">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <nav class="sys-tabs" aria-label="Система рейтинга">
-            <a class="sys-tab active" href="index.html" aria-current="page">Elo</a>
-            <a class="sys-tab" href="classic.html">PTS</a>
+        <nav class="rating-tabs" aria-label="Система рейтинга">
+            <button type="button" class="rating-tab active" data-rating="kits" aria-pressed="true" onclick="setRatingSystem('kits')">Kits</button>
+            <button type="button" class="rating-tab" data-rating="games" aria-pressed="false" onclick="setRatingSystem('games')">Games</button>
         </nav>
-        </div>
-
-        <div class="ctrl-row">
-            <div class="seg" role="group" aria-label="Тип рейтинга">
-                <button type="button" class="seg-btn active" data-elo-mode="kits" aria-pressed="true" onclick="setEloMode('kits')">Kits</button>
-                <button type="button" class="seg-btn" data-elo-mode="games" aria-pressed="false" onclick="setEloMode('games')">Games</button>
-            </div>
-            <button type="button" class="icon-btn" id="searchToggle" aria-label="Поиск игрока" onclick="toggleSearch()">
+        <button type="button" class="icon-btn" id="searchToggle" aria-label="Поиск игрока" onclick="toggleSearch()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
-            <button type="button" class="filter-btn" id="filterBtn" onclick="openFilterSheet()">
+        <button type="button" class="filter-btn" id="filterBtn" aria-label="Фильтры" onclick="openFilterSheet()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                <span>Фильтры</span><span class="filter-badge" id="filterBadge" hidden>0</span>
+                <span class="filter-label">Фильтры</span><span class="filter-badge" id="filterBadge" hidden>0</span>
             </button>
         </div>
 
@@ -174,10 +168,27 @@
             <input type="text" id="searchInput" placeholder="Поиск игрока...">
         </div>
 
-        <div class="chips" id="chipsRow" role="tablist" aria-label="Режим или кит"></div>
+        <section class="rating-panel" id="kitsPanel" aria-label="Рейтинг Kits PTS">
+            <div class="chips" id="kitsChipsRow" role="tablist" aria-label="Кит"></div>
+            <div class="board-heading">
+                <span class="player-count-badge" id="kitsPlayerCount" title="Игроков в текущем списке">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-3-3.87M16 2.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <strong>0</strong>
+                </span>
+            </div>
+            <div class="players-list" id="kitsPlayersList"></div>
+        </section>
 
-        <h2 class="section-title" id="tableSubtitle">OVERALL LEADERBOARD</h2>
-        <div class="players-list" id="playersList"></div>
+        <section class="rating-panel" id="gamesPanel" aria-label="Рейтинг Games Elo" hidden>
+            <div class="chips" id="gamesChipsRow" role="tablist" aria-label="Игра"></div>
+            <div class="board-heading">
+                <span class="player-count-badge" id="gamesPlayerCount" title="Игроков в текущем списке">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 20v-2a4 4 0 0 0-3-3.87M16 2.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <strong>0</strong>
+                </span>
+            </div>
+            <div class="players-list" id="gamesPlayersList"></div>
+        </section>
     </div>
 </div><!-- /boardScreen -->
 </div><!-- /mainPage -->
@@ -908,7 +919,7 @@
 <div class="sheet" id="filterSheet" hidden role="dialog" aria-label="Фильтры">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Фильтры</div>
-    <div class="sheet-label">Регион</div>
+    <div class="sheet-label" id="regionSheetLabel">Регион СНГ</div>
     <div class="chips-wrap" id="regionChips"></div>
     <label class="toggle-row">
         <span>Показывать Retired</span>
@@ -918,8 +929,11 @@
     <button type="button" class="sheet-done" onclick="closeFilterSheet()">Готово</button>
 </div>
 
-<script src="js/config.js?v=3.6.0"></script>
-<script src="js/demo-data.js?v=3.6.0"></script>
-<script src="js/main.js?v=3.6.0"></script>
+<script src="js/config.js?v=4.1.0"></script>
+<script src="js/demo-data.js?v=4.1.0"></script>
+<script src="js/main.js?v=4.1.0"></script>
+<script src="js/classic.js?v=4.1.0"></script>
+<script src="players/players.js?v=4.1.0"></script>
+<script>window.PTS.setPlayers(players);</script>
 </body>
 </html>
