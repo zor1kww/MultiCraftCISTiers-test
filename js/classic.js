@@ -1,41 +1,28 @@
-// ==========================================
-// 1. БАЗОВЫЕ НАСТРОЙКИ И ЗВУК
-// ==========================================
+window.PTS = (() => {
+'use strict';
 
-// Звуковое сопровождение интерфейса
-const clickSound = new Audio('assets/sounds/click.mp3');
+let players;
+let currentKitFilter = 'all';
+let currentKitRegion = 'all';
+let kitSearch = '';
+let showKitRetired = true;
 
-function playInterfaceClick() {
-    clickSound.currentTime = 0;
-    clickSound.play().catch(err => {});
-}
-
-// Глобальный слушатель кликов для эффекта нажатия кнопок
-document.addEventListener('click', (e) => {
-    const t = e.target;
-    if (!t) return;
-    if (
-        t.tagName === 'BUTTON' || 
-        t.tagName === 'A' || 
-        t.tagName === 'SELECT' || 
-        t.tagName === 'INPUT' ||
-        t.closest('.player-card-row') ||
-        t.closest('.sidebar a')
-    ) {
-        playInterfaceClick();
-    }
-});
-
-// Переключение тем оформления (Dark/Light)
-function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const targetTheme = currentTheme === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', targetTheme);
-    const btn = document.getElementById('themeToggleBtn');
-    if (btn) {
-        btn.innerHTML = targetTheme === 'light' ? 'Темная тема' : 'Светлая тема';
-    }
-}
+const tierPoints = {
+    HT1: 60, LT1: 45,
+    HT2: 30, LT2: 20,
+    HT3: 10, LT3: 6,
+    HT4: 4, LT4: 3,
+    HT5: 2, LT5: 1,
+    Unranked: 0
+};
+const tierColors = {
+    HT1: '#DAA520', LT1: '#DAA520',
+    HT2: '#A9A9A9', LT2: '#A9A9A9',
+    HT3: '#A0522D', LT3: '#8B4513',
+    HT4: '#808080', LT4: '#696969',
+    HT5: '#008080', LT5: '#2F4F4F',
+    Unranked: '#444b66'
+};
 
 // ==========================================
 // 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И ПАРСИНГ ТИРОВ
@@ -293,6 +280,14 @@ function openProfileByName(playerName) {
 // Открытие детального профиля игрока в модальном окне
 function openProfile(idx, filteredPlayersJSON) {
     try {
+        const mainBlock = document.getElementById('modalMainBlock');
+        const subBlock = document.getElementById('modalSubBlock');
+        if (mainBlock) mainBlock.style.display = '';
+        if (subBlock) subBlock.style.display = '';
+        const mainTitle = document.getElementById('modalMainTitle');
+        const subTitle = document.getElementById('modalSubTitle');
+        if (mainTitle) mainTitle.textContent = 'Main Tiers';
+        if (subTitle) subTitle.textContent = 'Sub Tiers';
         const localFiltered = JSON.parse(decodeURIComponent(filteredPlayersJSON));
         const player = localFiltered[idx];
         if (!player) return;
@@ -307,7 +302,7 @@ function openProfile(idx, filteredPlayersJSON) {
         }
 
         // Сбор и отображение объединенного тира в модальном окне
-        const targetKit = window.currentKitFilter || 'all';
+        const targetKit = currentKitFilter || 'all';
         const displayProfileRetiredTag = hasAnyRetiredKit(player);
         
         if (targetKit === 'all' || targetKit === 'sub-all') {
@@ -416,272 +411,132 @@ function closeModal() {
 // 4. ГЛАВНАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАБЛИЦЫ
 // ==========================================
 
+function renderKitChips() {
+    const row = document.getElementById('kitsChipsRow');
+    if (!row) return;
+    const active = currentKitFilter || 'all';
+    const main = (typeof maintiers !== 'undefined') ? maintiers : [];
+    const sub = (typeof subtiers !== 'undefined') ? subtiers : [];
+    const html = [chipHTML('all', 'Overall', 'crown', active === 'all', 'PTS.setKitFilter(this.dataset.v)')]
+        .concat(main.map(kit => chipHTML(kit, kit, kitImages[kit], active === kit, 'PTS.setKitFilter(this.dataset.v)')))
+        .concat([chipHTML('sub-all', 'Sub Overall', 'crown', active === 'sub-all', 'PTS.setKitFilter(this.dataset.v)')])
+        .concat(sub.map(kit => chipHTML(kit, kit, kitImages[kit], active === kit, 'PTS.setKitFilter(this.dataset.v)')));
+    row.innerHTML = html.join('');
+    const activeChip = row.querySelector('.chip.active');
+    if (activeChip) row.scrollLeft = Math.max(0, activeChip.offsetLeft - (row.clientWidth - activeChip.offsetWidth) / 2);
+}
+
+function setKitFilter(value, shouldRender = true) {
+    currentKitFilter = value || 'all';
+    if (shouldRender) renderAll();
+}
+
+function quickTiersFor(player, targetKit, showRetiredInPlace) {
+    const kits = targetKit === 'sub-all' ? subtiers : maintiers;
+    const items = kits.map((kit, order) => {
+        const tier = getCleanTier(player, kit);
+        const ret = isKitRetired(player, kit);
+        const pts = tierPoints[tier] || 0;
+        const weight = tier === 'Unranked' ? -10000 : (ret ? pts - 5000 : pts);
+        return { kit, tier, ret, weight, order };
+    }).sort((a, b) => b.weight - a.weight || a.order - b.order);
+    return items.map(item => {
+        const color = tierColors[item.tier] || '#444b66';
+        const hiddenRetired = !showRetiredInPlace && item.ret;
+        const empty = item.tier === 'Unranked' || hiddenRetired;
+        const label = empty ? '—' : `${item.ret ? 'R' : ''}${item.tier}`;
+        return `<div class="ov-tile${empty ? ' ov-tile-empty' : ''}${item.ret && !empty ? ' ov-tile-retired' : ''}" style="${empty ? '' : `border-color:${color}99;background:${color}26;`}" title="${escapeHTML(item.kit)}">
+            <img class="ov-tile-icon" src="${kitImages[item.kit] || ''}" onerror="this.style.opacity=0" alt="">
+            <span class="ov-tile-tier" style="color:${empty ? '#6b7490' : color};">${label}</span>
+        </div>`;
+    }).join('');
+}
+
 function renderPlayers() {
-    const list = document.getElementById('playersList');
+    const list = document.getElementById('kitsPlayersList');
     if (!list) return;
+    const subtitleEl = document.getElementById('kitsTableSubtitle');
+    const countEl = document.querySelector('#kitsPlayerCount strong');
+    const targetKit = currentKitFilter || 'all';
+    const isOverall = targetKit === 'all' || targetKit === 'sub-all';
+    const showRetiredInPlace = showKitRetired !== false;
+    const boardLabel = targetKit === 'all' ? 'Main Overall' : (targetKit === 'sub-all' ? 'Sub Overall' : targetKit);
+    if (subtitleEl) subtitleEl.textContent = boardLabel;
 
-    // Безопасное получение значений элементов
-    const searchInput = document.getElementById('searchInput');
-    const search = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    const region = window.currentRegionFilter || 'all';
-    
-    const targetKit = window.currentKitFilter || 'all';
-    
-    const retiredToggle = document.getElementById('retiredToggle');
-    const showRetiredInPlace = retiredToggle ? retiredToggle.checked : false;
-
-    if (typeof players === 'undefined' || !Array.isArray(players)) {
-        list.innerHTML = '<div style="text-align:center;color:#ffcc47;padding:40px;">Загрузка базы данных игроков...</div>';
+    if (!Array.isArray(players)) {
+        list.innerHTML = '<div class="board-empty">Загрузка PTS-рейтинга…</div>';
+        if (countEl) countEl.textContent = '0';
         return;
     }
 
-    const subtitleEl = document.getElementById('tableSubtitle');
-
-    if (targetKit === 'all') {
-        if (subtitleEl) subtitleEl.innerText = 'MAIN OVERALL LEADERBOARD';
-    } else if (targetKit === 'sub-all') {
-        if (subtitleEl) subtitleEl.innerText = 'SUB OVERALL LEADERBOARD';
-    } else {
-        if (subtitleEl) subtitleEl.innerText = `${targetKit.toUpperCase()} LEADERBOARD`;
-    }
-
-    const activeSubtiers = (typeof subtiers !== 'undefined') ? subtiers : [];
-
-    const activeMaintiers = (typeof maintiers !== 'undefined') ? maintiers : [];
-    const activePts = (typeof tierPoints !== 'undefined') ? tierPoints : {};
-    const activeColors = (typeof tierColors !== 'undefined') ? tierColors : {};
-    const activeKitImages = (typeof kitImages !== 'undefined') ? kitImages : {};
-
+    const kitsForSorting = targetKit === 'sub-all' ? subtiers : maintiers;
     let filtered = players.filter(player => {
-        const matchesSearch = player.name.toLowerCase().includes(search);
-        const matchesRegion = (region === 'all' || player.region === region);
-        
-        if (targetKit !== 'all' && targetKit !== 'sub-all') {
-            const tier = getCleanTier(player, targetKit);
-            const ret = isKitRetired(player, targetKit);
-            if (!showRetiredInPlace && ret) {
-                return false;
-            }
-            return matchesSearch && matchesRegion && tier !== "Unranked";
+        const matchesSearch = (player.name || '').toLowerCase().includes(kitSearch.toLowerCase());
+        const cisPlayer = KIT_REGION_CODES.includes(player.region);
+        const matchesRegion = cisPlayer && (currentKitRegion === 'all' || player.region === currentKitRegion);
+        if (!matchesSearch || !matchesRegion) return false;
+        if (!isOverall) {
+            if (!showRetiredInPlace && isKitRetired(player, targetKit)) return false;
+            return getCleanTier(player, targetKit) !== 'Unranked';
         }
-        
-        if (!showRetiredInPlace && hasAnyRetiredKit(player)) {
-            return false;
-        }
-        
-        return matchesSearch && matchesRegion;
+        if (!showRetiredInPlace && hasAnyRetiredKit(player)) return false;
+        return kitsForSorting.some(kit => getCleanTier(player, kit) !== 'Unranked');
     });
 
-    if (targetKit === 'all') {
-        filtered.sort((a, b) => {
-            return calcPoints(b, activeMaintiers) - calcPoints(a, activeMaintiers);
-        });
-    } else if (targetKit === 'sub-all') {
-        filtered.sort((a, b) => {
-            return calcPoints(b, activeSubtiers) - calcPoints(a, activeSubtiers);
-        });
-    } else {
-        filtered.sort((a, b) => {
-            const tierA = getCleanTier(a, targetKit);
-            const tierB = getCleanTier(b, targetKit);
-            return (activePts[tierB] || 0) - (activePts[tierA] || 0);
-        });
-    }
+    filtered.sort((a, b) => {
+        if (isOverall) return (calcPoints(b, kitsForSorting) - calcPoints(a, kitsForSorting)) || a.name.localeCompare(b.name);
+        return ((tierPoints[getCleanTier(b, targetKit)] || 0) - (tierPoints[getCleanTier(a, targetKit)] || 0)) || a.name.localeCompare(b.name);
+    });
 
-    list.innerHTML = '';
-    
-    if (filtered.length === 0) {
-        list.innerHTML = '<div style="text-align:center;color:#8892b0;padding:20px;">Игроки не найдены</div>';
+    if (countEl) countEl.textContent = String(filtered.length);
+    if (!filtered.length) {
+        list.innerHTML = '<div class="board-empty">Игроки не найдены</div>';
         return;
     }
 
     const filteredJSON = encodeURIComponent(JSON.stringify(filtered));
-    let htmlFragment = '';
+    list.innerHTML = filtered.map((player, index) => {
+        const position = index + 1;
+        const onClick = `onclick="PTS.openProfile(${index}, '${filteredJSON}')"`;
+        const isRet = isOverall ? hasAnyRetiredKit(player) : isKitRetired(player, targetKit);
+        const topClass = `${index < 5 ? `top-rank-${position}` : ''}${isRet ? ' retired-status' : ''}`;
+        const regionHTML = `<span class="player-meta-tag">${escapeHTML(player.region || '?')}</span>`;
+        const pts = isOverall ? calcPoints(player, kitsForSorting) : null;
+        const avgTier = isOverall ? calcAverageTier(player) : null;
+        const avgTag = isOverall && avgTier !== 'Unranked' ? getMetaTierTag(avgTier, isRet) : '';
+        const avgTagOv = isOverall && avgTier !== 'Unranked' ? ovTierTagHTML(avgTier, isRet) : '';
+        const penalty = !isOverall ? getEffectivePenalty(player, targetKit) : 0;
+        const penaltyHTML = penalty > 0 ? `<span class="bust-penalty-badge" title="Штрафные очки по этому киту">⚠ ${penalty}</span>` : '';
 
-    filtered.forEach((player, index) => {
-        let rightColumnContent = '';
-        let rankPrefix = `#${index + 1}`; 
-        let topClass = '';
-        
-        if (index === 0) topClass = 'top-rank-1';
-        else if (index === 1) topClass = 'top-rank-2';
-        else if (index === 2) topClass = 'top-rank-3';
-        else if (index === 3) topClass = 'top-rank-4';
-        else if (index === 4) topClass = 'top-rank-5';
-        
-        let isRet = false;
-        if (targetKit !== 'all' && targetKit !== 'sub-all' && isKitRetired(player, targetKit)) {
-            isRet = true;
-        } else if ((targetKit === 'all' || targetKit === 'sub-all') && hasAnyRetiredKit(player)) {
-            isRet = true;
-        }
-        
-        if (isRet) {
-            topClass = topClass ? topClass + ' retired-status' : 'retired-status';
-        }
-        
-        let bustCardData = null; // Заполняется только для карточки топа по конкретному киту (новый макет со скином)
-
-        if (targetKit === 'all') {
-            const mainPts = calcPoints(player, activeMaintiers);
-            rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${mainPts} PTS</span>`;
-        } else if (targetKit === 'sub-all') {
-            const subPts = calcPoints(player, activeSubtiers);
-            rightColumnContent = `<span style="color: var(--accent); font-size:15px; white-space:nowrap;">${subPts} PTS</span>`;
-        } else {
-            const currentTier = getCleanTier(player, targetKit);
-            const ret = isKitRetired(player, targetKit);
-            const kitPenalty = getEffectivePenalty(player, targetKit);
-            // Иконка кита и PTS убраны из этого вида по требованию - тир
-            // уже понятен по цвету и подписи badge, а PTS дублировал
-            // информацию, доступную в профиле. Штрафные очки теперь
-            // выводятся отдельным элементом рядом с рангом (см. bustCardData).
-            bustCardData = { currentTier, ret, kitPenalty };
-        }
-
-
-        let quickTiersHTML = '';
-        if (targetKit === 'all' || targetKit === 'sub-all') {
-            const kitsForRow = (targetKit === 'sub-all') ? activeSubtiers : activeMaintiers;
-            let playerKitsObjects = kitsForRow.map(kit => {
-                const tier = getCleanTier(player, kit);
-                const ret = isKitRetired(player, kit);
-                
-                let sortWeight = -1000;
-                if (tier !== "Unranked") {
-                    const pts = activePts[tier] || 0;
-                    if (!ret) {
-                        sortWeight = pts;
-                    } else {
-                        sortWeight = pts - 5000;
-                    }
-                } else {
-                    sortWeight = -10000;
-                }
-                
-                return { kit, tier, ret, sortWeight };
-            });
-
-            playerKitsObjects.sort((a, b) => b.sortWeight - a.sortWeight);
-
-            quickTiersHTML = `<div class="player-tiers-row">`;
-            playerKitsObjects.forEach(item => {
-                const kit = item.kit;
-                const tier = item.tier;
-                const ret = item.ret;
-                const clr = activeColors[tier] || '#444b66';
-                const iconSrc = activeKitImages[kit] || "";
-                const labelText = (ret && tier !== "Unranked") ? `R${tier}` : tier;
-                
-                if (tier !== "Unranked") {
-                    if (!showRetiredInPlace && ret) {
-                        quickTiersHTML += `
-                        <div class="tier-item-box" style="opacity: 0.25;">
-                            <div class="tier-icon-circle unranked">
-                                <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                            </div>
-                            <div class="tier-label-under" style="color: #444b66;">-</div>
-                        </div>`;
-                    } else {
-                        quickTiersHTML += `
-                        <div class="tier-item-box" style="${ret ? 'opacity:0.4;' : ''}">
-                            <div class="tier-icon-circle" style="border-color: ${clr}cc; box-shadow: 0 0 6px ${clr}22;">
-                                <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                            </div>
-                            <div class="tier-label-under" style="color: ${clr};">${labelText}</div>
-                        </div>`;
-                    }
-                } else {
-                    quickTiersHTML += `
-                    <div class="tier-item-box">
-                        <div class="tier-icon-circle unranked">
-                            <img src="${iconSrc}" onerror="this.style.opacity=0" alt="">
-                        </div>
-                        <div class="tier-label-under" style="color: #444b66;">-</div>
-                    </div>`;
-                }
-            });
-            quickTiersHTML += `</div>`;
-        }
-
-        let displayProfileRetiredTag = hasAnyRetiredKit(player);
-
-        // Формирование тегов мета-информации для карточки игрока
-        let metaTagsHTML = '';
-        if (player.region) {
-            metaTagsHTML += `<span class="player-meta-tag">${player.region}</span>`;
-        }
-        
-        // В топе по конкретному киту тир уже показан крупным badge справа
-        // (см. rightColumnContent выше) - здесь его не дублируем, чтобы
-        // не показывать один и тот же тир дважды на одной карточке.
-        if (targetKit === 'all' || targetKit === 'sub-all') {
-            const avgTier = calcAverageTier(player);
-            if (avgTier !== "Unranked") {
-                metaTagsHTML += getMetaTierTag(avgTier, displayProfileRetiredTag);
-            }
-        }
-
-        if (bustCardData) {
-            // Новый макет карточки для топа по конкретному киту: скин
-            // игрока (голова + плечи) слева на всю высоту карточки,
-            // справа сверху ранг в топе + ник, ниже одной строкой -
-            // регион, тир по этому киту и штрафные очки (если есть).
-            // Пока у всех игроков один и тот же дефолтный скин-заглушка -
-            // индивидуальные скины планируются позже отдельной системой.
-            const penaltyHTML = bustCardData.kitPenalty > 0
-                ? `<span class="bust-penalty-badge" title="Штрафные очки по этому киту">⚠ ${bustCardData.kitPenalty}</span>`
-                : '';
-            const regionHTML = player.region
-                ? `<span class="player-meta-tag">${player.region}</span>`
-                : '';
-
-            htmlFragment += `
-            <div class="player-container player-container-bust ${topClass}">
-                <div class="player-card-row player-card-row-bust" onclick="openProfile(${index}, '${filteredJSON}')">
-                    <img class="bust-card-skin" src="assets/skins/default_bust.png" alt="" onerror="this.style.display='none';">
-
-                    <div class="bust-card-info">
-                        <div class="bust-card-top">
-                            <span class="player-rank">${rankPrefix}</span>
-                            <span class="player-name">${player.name}</span>
-                        </div>
-                        <div class="bust-card-bottom">
-                            ${regionHTML}
-                            ${getTierBadge(bustCardData.currentTier, bustCardData.ret)}
-                            ${penaltyHTML}
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        } else {
-            htmlFragment += `
-            <div class="player-container ${topClass}">
-                <div class="player-card-row" onclick="openProfile(${index}, '${filteredJSON}')">
-                    
-                    <div class="player-name-block">
-                        <span class="player-rank">${rankPrefix}</span>
-                        <span class="player-name">${player.name}</span>
-                    </div>
-
-                    <div class="player-center-block">
-                        <div class="player-meta-box">
-                            ${metaTagsHTML}
-                        </div>
-                        ${quickTiersHTML}
-                    </div>
-
-                    <div class="player-right">
-                        ${rightColumnContent}
-                    </div>
-
+        // Общий топ: первые пять - большие карточки. Топ отдельного кита: большие карточки
+        // для всех мест (с 6-го фон нейтральный, без цветной заливки).
+        if (index < 5 || !isOverall) {
+            const tiles = isOverall ? `<div class="ov-scroll" aria-label="Ранги по китам">${quickTiersFor(player, targetKit, showRetiredInPlace)}</div>` : '';
+            const ratingLine = isOverall
+                ? `<div class="ov-elo"><strong>${pts} PTS</strong></div><div class="ov-tags">${avgTagOv}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>`
+                : `<div class="ov-tags">${ovTierTagHTML(getCleanTier(player, targetKit), isRet)}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>${penaltyHTML ? `<div class="ov-elo premium-rating-line">${penaltyHTML}</div>` : ''}`;
+            return `<div class="player-container ov-card premium-kit-card ${topClass}" ${onClick}>
+                <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
+                <div class="ov-body">
+                    <div class="ov-title">${rankHTML(position)}<span class="player-name">${escapeHTML(player.name)}</span></div>
+                    ${ratingLine}${tiles}
                 </div>
             </div>`;
         }
-    });
-    
-    list.innerHTML = htmlFragment;
+
+        return `<div class="player-container ${topClass}">
+            <div class="player-card-row" ${onClick}>
+                <div class="player-name-block">${rankHTML(position)}<span class="player-name">${escapeHTML(player.name)}</span></div>
+                <div class="player-center-block"><div class="player-meta-box">${regionHTML}${avgTag}</div><div class="ov-scroll compact-overall-tiles">${quickTiersFor(player, targetKit, showRetiredInPlace)}</div></div>
+                <div class="player-right"><span class="pts-total">${pts} PTS</span></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function renderAll() {
+    renderKitChips();
+    renderPlayers();
 }
 
 // ==========================================
@@ -703,291 +558,6 @@ function buildFaqTable() {
             <td><span style="color: var(--accent); font-weight:bold;">${activePts[tier] || 0} PTS</span></td>
         </tr>`;
     }).join('');
-}
-
-// ==========================================
-// 6. НАВИГАЦИЯ И ИНИЦИАЛИЗАЦИЯ
-// ==========================================
-
-// Переключение вкладок
-function switchTab(tabId) {
-    const sb = document.getElementById('sidebar');
-    if (sb) sb.classList.remove('active');
-    
-    const mp = document.getElementById('mainPage');
-    if (mp) mp.style.display = 'none';
-    
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.style.display = 'none';
-    });
-    
-    if (tabId === 'mainPage') {
-        if (mp) mp.style.display = 'block';
-        renderPlayers();
-    } else {
-        const target = document.getElementById(tabId);
-        if (target) target.style.display = 'block';
-
-        // При входе в "Тестирование" / "Другую информацию" всегда
-        // показываем сетку карточек, а не ранее открытую деталь
-        if (tabId === 'testingTab') resetHubGrid('testingHubGrid');
-        if (tabId === 'otherInfoTab') resetHubGrid('otherInfoHubGrid');
-        if (tabId === 'duelsTab') renderGlobalDuels();
-    }
-    window.scrollTo(0, 0);
-}
-
-function backHome() {
-    switchTab('mainPage');
-}
-
-// ==========================================
-// ХАБ-КАРТОЧКИ ("Тестирование" / "Другая информация")
-// ==========================================
-
-// Соответствие id сетки → id заголовка и вводного текста над ней,
-// которые нужно прятать при открытии конкретной карточки
-const HUB_HEADER_IDS = {
-    testingHubGrid: ['testingHubTitle', 'testingHubIntro'],
-    otherInfoHubGrid: ['otherInfoHubTitle', 'otherInfoHubIntro']
-};
-
-// Скрывает все открытые hub-detail внутри вкладки и возвращает сетку карточек
-function resetHubGrid(gridId) {
-    const grid = document.getElementById(gridId);
-    if (grid) grid.style.display = 'flex';
-
-    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = '';
-    });
-
-    const tab = grid ? grid.closest('.tab-content') : null;
-    if (!tab) return;
-
-    tab.querySelectorAll('.hub-detail').forEach(detail => {
-        detail.classList.remove('active');
-    });
-}
-
-// Открывает конкретную карточку (по data-target), пряча сетку
-function openHubDetail(gridId, detailId) {
-    const grid = document.getElementById(gridId);
-    if (grid) grid.style.display = 'none';
-
-    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-
-    const tab = grid ? grid.closest('.tab-content') : null;
-    if (tab) {
-        tab.querySelectorAll('.hub-detail').forEach(d => d.classList.remove('active'));
-    }
-
-    const detail = document.getElementById(detailId);
-    if (detail) detail.classList.add('active');
-
-    // PTS-таблица собирается динамически — на случай если карточку открыли впервые
-    if (detailId === 'hubPoints' && typeof buildFaqTable === 'function') {
-        buildFaqTable();
-    }
-
-    window.scrollTo(0, 0);
-}
-
-// Возврат из детали к сетке карточек внутри той же вкладки
-function closeHubDetail(gridId, detailId) {
-    const detail = document.getElementById(detailId);
-    if (detail) detail.classList.remove('active');
-
-    const grid = document.getElementById(gridId);
-    if (grid) grid.style.display = 'flex';
-
-    (HUB_HEADER_IDS[gridId] || []).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = '';
-    });
-
-    window.scrollTo(0, 0);
-}
-
-// Клик по самой карточке (делегирование на весь .hub-grid)
-document.querySelectorAll('.hub-grid').forEach(grid => {
-    grid.addEventListener('click', (e) => {
-        const card = e.target.closest('.hub-card');
-        if (!card) return;
-        const targetId = card.getAttribute('data-target');
-        if (targetId) openHubDetail(grid.id, targetId);
-    });
-
-    // Долгое нажатие (удержание) на touch-устройствах показывает подпись
-    // карточки ("Читать →"), не открывая раздел — как на десктопном hover.
-    let pressTimer = null;
-    const LONG_PRESS_MS = 250;
-
-    grid.addEventListener('touchstart', (e) => {
-        const card = e.target.closest('.hub-card');
-        if (!card) return;
-        pressTimer = setTimeout(() => {
-            card.classList.add('hub-card-pressed');
-        }, LONG_PRESS_MS);
-    }, { passive: true });
-
-    grid.addEventListener('touchend', () => {
-        clearTimeout(pressTimer);
-        grid.querySelectorAll('.hub-card-pressed').forEach(c => c.classList.remove('hub-card-pressed'));
-    });
-
-    grid.addEventListener('touchmove', () => {
-        clearTimeout(pressTimer);
-        grid.querySelectorAll('.hub-card-pressed').forEach(c => c.classList.remove('hub-card-pressed'));
-    }, { passive: true });
-});
-
-// Работа с боковым меню (Sidebar)
-const menuBtn = document.getElementById('menuBtn');
-const sidebar = document.getElementById('sidebar');
-
-if (menuBtn && sidebar) {
-    menuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sidebar.classList.toggle('active');
-    });
-
-    window.addEventListener('click', (e) => {
-        if (!sidebar.contains(e.target) && e.target !== menuBtn) {
-            sidebar.classList.remove('active');
-        }
-    });
-}
-
-// Привязка обработчиков событий ввода
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('searchInput');
-    const retiredToggle = document.getElementById('retiredToggle');
-
-    if (searchInput) searchInput.addEventListener('input', renderPlayers);
-    if (retiredToggle) retiredToggle.addEventListener('change', renderPlayers);
-
-    // Универсальная инициализация кастомного выпадающего списка.
-    // onChangeCallback по умолчанию renderPlayers (главная страница);
-    // передаётся отдельно для фильтров на других вкладках (напр. "Дуэли").
-    function initCustomDropdown(prefix, stateKey, defaultValue, onChangeCallback) {
-        window[stateKey] = defaultValue;
-        const callback = onChangeCallback || renderPlayers;
-
-        const customEl = document.getElementById(prefix + 'Custom');
-        const triggerEl = document.getElementById(prefix + 'Trigger');
-        const panelEl = document.getElementById(prefix + 'Panel');
-        const labelEl = document.getElementById(prefix + 'Label');
-
-        if (!customEl || !triggerEl || !panelEl || !labelEl) return;
-
-        triggerEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Закрываем все остальные выпадающие списки, чтобы два списка
-            // (например, киты и регион) не могли быть открыты одновременно
-            document.querySelectorAll('.custom-select.open').forEach(el => {
-                if (el !== customEl) el.classList.remove('open');
-            });
-            customEl.classList.toggle('open');
-        });
-
-        const options = panelEl.querySelectorAll('.custom-select-option');
-        options.forEach(opt => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const value = opt.getAttribute('data-value');
-                window[stateKey] = value;
-
-                options.forEach(o => o.classList.remove('selected'));
-                opt.classList.add('selected');
-
-                labelEl.textContent = opt.textContent;
-                customEl.classList.remove('open');
-
-                callback();
-            });
-        });
-
-        window.addEventListener('click', (e) => {
-            if (!customEl.contains(e.target)) {
-                customEl.classList.remove('open');
-            }
-        });
-    }
-
-    // Фильтр китов (Main/Sub Overall)
-    initCustomDropdown('kitFilter', 'currentKitFilter', 'all');
-
-    // Фильтр региона
-    initCustomDropdown('regionFilter', 'currentRegionFilter', 'all');
-
-    // Фильтр китов во вкладке "Дуэли"
-    initCustomDropdown('duelsKitFilter', 'currentDuelsKitFilter', 'all', renderGlobalDuels);
-
-    // Поиск во вкладке "Дуэли"
-    const duelsSearchInput = document.getElementById('duelsSearchInput');
-    if (duelsSearchInput) duelsSearchInput.addEventListener('input', renderGlobalDuels);
-
-    // Чекбоксы "Только квалификации" / "Только высокие результаты".
-    // Взаимоисключающие: квалификация даёт максимум LT3, поэтому вместе
-    // они всегда дали бы пустой список.
-    const duelsQualToggle = document.getElementById('duelsQualToggle');
-    const duelsHighToggle = document.getElementById('duelsHighToggle');
-    if (duelsQualToggle && duelsHighToggle) {
-        duelsQualToggle.addEventListener('change', () => {
-            if (duelsQualToggle.checked) duelsHighToggle.checked = false;
-            renderGlobalDuels();
-        });
-        duelsHighToggle.addEventListener('change', () => {
-            if (duelsHighToggle.checked) duelsQualToggle.checked = false;
-            renderGlobalDuels();
-        });
-    }
-
-    // Первичный запуск отрисовки
-    initSite();
-});
-
-// Дополнительная инициализация на случай, если DOM уже загружен
-if (document.readyState === "complete" || document.readyState === "interactive") {
-    initSite();
-}
-
-// Функция автоматического копирования инвайт-кода
-function copyInviteCode() {
-    const inviteCode = "UA75LL01";
-    const btn = document.getElementById('inviteBtn');
-    
-    navigator.clipboard.writeText(inviteCode).then(() => {
-        if (btn) {
-            btn.innerHTML = "Скопировано!";
-            btn.style.borderColor = "var(--accent)";
-            btn.style.color = "var(--accent)";
-            
-            setTimeout(() => {
-                btn.innerHTML = `${inviteCode}`;
-                btn.style.borderColor = "";
-                btn.style.color = "";
-            }, 1500);
-        }
-    }).catch(err => {
-        const el = document.createElement('textarea');
-        el.value = inviteCode;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
-        
-        if (btn) {
-            btn.innerHTML = "Скопировано!";
-            setTimeout(() => {
-                btn.innerHTML = `${inviteCode}`;
-            }, 1500);
-        }
-    });
 }
 
 // ==========================================
@@ -1182,9 +752,9 @@ function renderGlobalDuels() {
                 <span class="duel-date">${entry.date || ''}</span>
             </div>
             <div class="duel-row-main">
-                <span class="duel-opponent-name" onclick="openProfileByName('${playerSafe}')">${entry.playerName}</span>
+                <span class="duel-opponent-name" onclick="PTS.openProfileByName('${playerSafe}')">${entry.playerName}</span>
                 <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
-                <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
+                <span class="duel-opponent-name" onclick="PTS.openProfileByName('${opponentSafe}')">${entry.opponent}</span>
             </div>
             ${tierChangeHTML}
             ${commentHTML}
@@ -1224,7 +794,7 @@ function renderDuelRow(rawEntry, showKit) {
         </div>
         <div class="duel-row-main">
             <span class="duel-opponent-label">против</span>
-            <span class="duel-opponent-name" onclick="openProfileByName('${opponentSafe}')">${entry.opponent}</span>
+            <span class="duel-opponent-name" onclick="PTS.openProfileByName('${opponentSafe}')">${entry.opponent}</span>
             <span class="duel-score">${entry.scorePlayer}:${entry.scoreOpponent}</span>
             <span class="duel-result-badge">${resultLabel}</span>
         </div>
@@ -1249,12 +819,44 @@ function renderDuelsList(matchHistory, opts = {}) {
     return sorted.map(entry => renderDuelRow(entry, showKit)).join('');
 }
 
-// Запуск сайта
-function initSite() {
-    renderPlayers();
+function setPlayers(data) {
+    players = Array.isArray(data) ? data : [];
+    renderAll();
+    if (typeof renderHome === 'function') renderHome();
 }
 
-// Хук: вызывается из index.html, когда players.js загрузился (асинхронно, после этого файла)
-window.onPlayersLoaded = function() {
+function setSearch(value) { kitSearch = String(value || ''); renderPlayers(); }
+function getSearch() { return kitSearch; }
+function setRegion(value) {
+    currentKitRegion = value === 'all' || KIT_REGION_CODES.includes(value) ? value : 'all';
     renderPlayers();
+}
+function getRegion() { return currentKitRegion; }
+function setRetired(value) { showKitRetired = !!value; renderPlayers(); }
+function getRetired() { return showKitRetired; }
+function getKitFilter() { return currentKitFilter; }
+function getPlayers() { return Array.isArray(players) ? players : []; }
+
+return {
+    setPlayers,
+    setSearch,
+    getSearch,
+    setRegion,
+    getRegion,
+    setRetired,
+    getRetired,
+    setKitFilter,
+    getKitFilter,
+    getPlayers,
+    renderAll,
+    renderPlayers,
+    openProfile,
+    openProfileByName,
+    calcPoints,
+    calcAverageTier,
+    hasAnyRetiredKit,
+    getTierBadge,
+    normalizeDuelEntry,
+    collectGlobalDuels
 };
+})();
