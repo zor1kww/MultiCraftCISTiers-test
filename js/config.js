@@ -86,30 +86,16 @@ const PLAYERS_REFRESH_SECONDS = 60;
 // Elo-система только запущена, поэтому в Beta Elo пока никого не показываем
 // (сайт при этом даже не обращается к боту). Когда будете готовы открыть
 // рейтинг - поставьте true, данные пойдут из API как раньше.
-const BETA_SHOW_PLAYERS = false;
+const BETA_SHOW_PLAYERS = true;
 
-
-// ==========================================
-// ДЕМО-РЕЖИМ (только для макета)
-// ==========================================
-// true: сайт не обращается к API, а показывает вымышленных игроков из
-// js/demo-data.js, чтобы оценить внешний вид карточек. В боевой версии
-// должно быть false (или строка удалена).
-const DEMO_MODE = true;
-
-
-// ==========================================
-// GAMES: мини-игры (раздел Elo -> Games)
-// ==========================================
-
-// Список мини-игр. Новая игра = одна строка здесь (и картинка в gameImages).
+// Мини-игры имеют собственный Elo и не смешиваются с PTS-китами.
+// Список мини-игр. Новая игра = одна строка здесь и одна строка в gameImages.
 const miniGames = [
     "BedWars", "SkyWars", "BedrockBox", "Spleef", "Pillars",
-    "Sumo", "Bed Fight", "Fireball Fight", "SkyWars Duel", "The Bridge"
+    "Sumo", "Bed Fight", "Fireball Fight", "SkyWars Duel", "The Bridge", "Stick Fight"
 ];
 
-// Иконки игр - ЗАГОТОВКИ: положите картинки с этими именами в assets/games/
-// (пока файлов нет - плитка просто показывает ранг без иконки).
+// Иконки игр: файлы кладём в assets/games/ (имя: строчными, пробелы -> "_").
 const gameImages = {
     "BedWars":        "assets/games/bedwars.png",
     "SkyWars":        "assets/games/skywars.png",
@@ -120,5 +106,13 @@ const gameImages = {
     "Bed Fight":      "assets/games/bed_fight.png",
     "Fireball Fight": "assets/games/fireball_fight.png",
     "SkyWars Duel":   "assets/games/skywars_duel.png",
-    "The Bridge":     "assets/games/the_bridge.png"
+    "The Bridge":     "assets/games/the_bridge.png",
+    "Stick Fight":    "assets/games/stick_fight.png"
 };
+
+const GAME_REGION_CODES = ["NA", "EU", "AS", "OC", "SA", "ME", "AF", "CA"];
+const KIT_REGION_CODES = ["RU", "UA", "BY", "KZ", "UZ", "KG", "AM", "AZ", "MD", "TJ"];
+
+// ДЕМО-РЕЖИМ (только для тестового репозитория): рейтинг Games берётся из
+// js/demo-data.js, а не с API. В боевой версии поставьте false или удалите.
+const DEMO_MODE = true;
