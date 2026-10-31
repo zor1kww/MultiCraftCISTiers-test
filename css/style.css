@@ -2252,3 +2252,119 @@ button:focus-visible, a:focus-visible, input:focus-visible, [onclick]:focus-visi
 /* Счётчик игроков без подписи: значок слева и тонкая линия справа */
 .board-heading { justify-content: flex-start; margin: 14px 2px 12px; }
 .board-heading::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+
+/* ==========================================
+   v8: подсветка нажатий, скины, поиск, карточки, главная, единые размеры
+   ========================================== */
+:root { --ctl-h: 44px; --ctl-r: 12px; }
+
+/* Без синего прозрачного квадрата при касании и без выделения текста у кнопок */
+* { -webkit-tap-highlight-color: transparent; }
+button, a, label, [onclick], [role="button"], .chip, .ov-card, .home-leader-row, .home-search-hit {
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+}
+button:focus:not(:focus-visible), a:focus:not(:focus-visible), [onclick]:focus:not(:focus-visible) { outline: none; }
+
+/* Скины: пока скин обрезается скриптом, картинки скрыты (не мелькают маленькими) */
+.skin-img { transition: opacity .15s; }
+body:not(.skin-ready) .skin-img { opacity: 0; }
+.premium-kit-card .ov-skin-wrap, .premium-game-card .ov-skin-wrap { flex-basis: 132px; }
+.ov-card-single .ov-skin-wrap { flex-basis: 108px; }
+
+/* Цвет номера места = цвет рамки (золото, серебро, бронза, серый, бирюзовый) */
+.player-rank-1 { color: #daa520; }
+.player-rank-2 { color: #a9a9a9; }
+.player-rank-3 { color: #cd7f32; }
+.player-rank-4 { color: #808080; }
+.player-rank-5 { color: #20a0a0; }
+.player-rank-6 { color: var(--text-muted); }
+
+/* Карточка топа отдельного кита / игры: аватар, данные и плитка кита справа */
+.ov-card-single { min-height: 112px; align-items: stretch; }
+.ov-card-single .ov-body { justify-content: center; }
+.ov-single-tile {
+    flex: 0 0 74px; align-self: center; margin: 10px 12px 10px 0; padding: 8px 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 1.5px solid; border-radius: 14px; box-sizing: border-box;
+}
+.ov-single-tile .ov-tile-icon { width: 30px; height: 30px; object-fit: contain; }
+.ov-single-tile .ov-tile-tier { font-size: 14px; font-weight: bold; line-height: 1; }
+
+/* Поиск на главной: без квадратного выделения, подсказки, кнопка очистки */
+.home-search-wrap { position: relative; margin-bottom: 10px; }
+.home-search { display: flex; align-items: center; gap: 8px; min-height: 54px; padding: 0 6px 0 14px; margin-bottom: 0; }
+.home-search-icon { flex: 0 0 auto; }
+.home-search input, .home-search input:focus, .home-search input:focus-visible {
+    flex: 1; min-width: 0; padding: 12px 4px; border: 0 !important; outline: none !important; box-shadow: none !important;
+    background: transparent !important; -webkit-appearance: none; appearance: none;
+    color: var(--text-main); font-family: inherit; font-size: 15px;
+}
+.home-search:focus-within { border-color: var(--accent); }
+.home-search .home-search-clear {
+    flex: 0 0 34px; width: 34px; min-width: 0; height: 34px; padding: 0; border: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, .10); color: var(--text-main); cursor: pointer;
+}
+.home-search .home-search-clear[hidden] { display: none; }
+.home-search .home-search-go { flex: 0 0 46px; width: 46px; min-width: 0; height: 42px; padding: 0; border-radius: 10px; }
+.home-search-results {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30; overflow: hidden;
+    background: var(--bg-solid); border: 1px solid var(--border-color); border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .45);
+}
+.home-search-results[hidden] { display: none; }
+.home-search-hit {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 12px 14px;
+    background: transparent; border: 0; border-bottom: 1px solid var(--border-color); color: var(--text-main);
+    font-family: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.home-search-hit:last-child { border-bottom: 0; }
+.home-search-hit-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: bold; }
+.home-search-hit-meta { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.home-search-badge { padding: 2px 6px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 10px; font-weight: bold; color: var(--accent); }
+.home-search-empty { padding: 14px; text-align: center; font-size: 13px; color: var(--text-muted); }
+.home-region-tag {
+    display: inline-flex; align-items: center; width: fit-content; padding: 2px 9px; border: 1px solid var(--border-color);
+    border-radius: 8px; background: rgba(0, 0, 0, .25); font-size: 12px; font-weight: bold; color: var(--text-muted);
+}
+
+/* Топ на главной (PTS и мини-игры) */
+.home-leader-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 14px; text-align: left; }
+.home-leader-row-1 { border-color: rgba(218, 165, 32, .6); }
+.home-leader-row-2 { border-color: rgba(169, 169, 169, .55); }
+.home-leader-row-3 { border-color: rgba(205, 127, 50, .6); }
+.home-leader-row-4 { border-color: rgba(128, 128, 128, .5); }
+.home-leader-row-5 { border-color: rgba(0, 150, 150, .55); }
+.home-leader-position { flex: 0 0 22px; font-size: 17px; font-weight: bold; text-align: center; }
+.home-leader-position-1 { color: #daa520; }
+.home-leader-position-2 { color: #a9a9a9; }
+.home-leader-position-3 { color: #cd7f32; }
+.home-leader-position-4 { color: #808080; }
+.home-leader-position-5 { color: #20a0a0; }
+.home-leader-avatar { position: relative; flex: 0 0 56px; width: 56px; height: 56px; border-radius: 14px; overflow: hidden; background: linear-gradient(135deg, #2a2d38, #14161d); }
+.home-leader-row-1 .home-leader-avatar { background: linear-gradient(135deg, rgba(218, 165, 32, .9), rgba(218, 165, 32, .15)); }
+.home-leader-row-2 .home-leader-avatar { background: linear-gradient(135deg, rgba(169, 169, 169, .85), rgba(169, 169, 169, .15)); }
+.home-leader-row-3 .home-leader-avatar { background: linear-gradient(135deg, rgba(160, 82, 45, .9), rgba(160, 82, 45, .15)); }
+.home-leader-row-4 .home-leader-avatar { background: linear-gradient(135deg, rgba(128, 128, 128, .8), rgba(128, 128, 128, .15)); }
+.home-leader-row-5 .home-leader-avatar { background: linear-gradient(135deg, rgba(0, 128, 128, .85), rgba(0, 128, 128, .15)); }
+.home-leader-skin { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; image-rendering: pixelated; }
+.home-leader-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.home-leader-info strong { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.home-leader-tier { flex: 0 0 auto; }
+.home-leader-score { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; min-width: 46px; }
+.home-leader-score strong { font-size: 17px; color: var(--text-main); }
+.home-leader-score span { font-size: 10px; letter-spacing: .6px; color: var(--text-muted); }
+
+/* Единые размеры органов управления: 44px высота, скругление 12px */
+.board-top { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+.board-top .back-btn, .board-top .filter-btn {
+    flex: 0 0 var(--ctl-h); width: var(--ctl-h); height: var(--ctl-h); margin: 0; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center; border-radius: var(--ctl-r); box-sizing: border-box;
+}
+.board-top .rating-tabs { flex: 1; min-width: 0; height: var(--ctl-h); padding: 3px; box-sizing: border-box; border-radius: var(--ctl-r); align-items: stretch; }
+.board-top .rating-tab { min-height: 0; height: 100%; padding: 0 10px; border-radius: 9px; }
+.chips .chip { height: 40px; padding: 0 12px; box-sizing: border-box; border-radius: var(--ctl-r); }
+.chips-wrap .chip { height: 40px; }
+.sheet-done { height: 48px; border-radius: var(--ctl-r); padding: 0; }
+.toggle-row { min-height: 48px; }
