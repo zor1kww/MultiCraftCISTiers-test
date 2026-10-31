@@ -14,14 +14,11 @@ function playInterfaceClick() {
 document.addEventListener('click', (e) => {
     const t = e.target;
     if (!t) return;
-    if (
-        t.tagName === 'BUTTON' || 
-        t.tagName === 'A' || 
-        t.tagName === 'SELECT' || 
-        t.tagName === 'INPUT' ||
-        t.closest('.player-card-row') ||
-        t.closest('.sidebar a')
-    ) {
+    if (t.closest && t.closest('[data-no-sound]')) return;
+    if (t.closest && t.closest(
+        'button, a[href], select, input, label, [onclick], [role="button"], .chip, .ov-card, ' +
+        '.player-card-row, .home-leader-row, .home-result-row, .home-mode-card, .home-search-hit, .sidebar a'
+    )) {
         playInterfaceClick();
     }
 });
@@ -398,7 +395,7 @@ function crownSVG(className = 'chip-crown') {
 }
 
 function rankHTML(position) {
-    return `<span class="player-rank${position <= 5 ? ' player-rank-premium' : ''}">${position <= 5 ? crownSVG('rank-crown') : ''}<span>#${position}</span></span>`;
+    return `<span class="player-rank${position <= 5 ? ' player-rank-premium' : ''} player-rank-${Math.min(position, 6)}"><span>#${position}</span></span>`;
 }
 
 function openRating(system, filter = 'all') {
@@ -433,6 +430,27 @@ function chipHTML(value, label, iconSrc, active, handler) {
         ? crownSVG()
         : (iconSrc ? `<img src="${escapeHTML(iconSrc)}" onerror="this.style.display='none'" alt="">` : '');
     return `<button type="button" role="tab" aria-selected="${active}" class="chip${active ? ' active' : ''}" data-v="${escapeHTML(value)}" onclick="${handler}">${icon}<span>${escapeHTML(label)}</span></button>`;
+}
+
+// Плитка кита/игры справа в карточке отдельного топа: иконка и ранг
+function ovSingleTileHTML(iconSrc, tier, retired, title) {
+    const clr = tierColorOf(tier, '#8892b0');
+    const retiredMark = retired ? '<span class="ov-r">R</span>' : '';
+    return `<div class="ov-single-tile${retired ? ' ov-tile-retired' : ''}" style="border-color:${clr}99;background:${clr}26;" title="${escapeHTML(title || '')}">
+        <img class="ov-tile-icon" src="${escapeHTML(iconSrc || '')}" alt="" onerror="this.style.visibility='hidden';">
+        <span class="ov-tile-tier" style="color:${clr};">${retiredMark}${tier}</span>
+    </div>`;
+}
+
+// Строка игрока в топе на главной (PTS и мини-игры). unit - подпись под числом
+function homeLeaderRowHTML(player, index, tierHTML, value, unit, onclick) {
+    return `<button type="button" class="home-leader-row home-leader-row-${index + 1}" onclick="${onclick}">
+        <span class="home-leader-position home-leader-position-${index + 1}">${index + 1}</span>
+        <span class="home-leader-avatar">${skinImgHTML(player, 'home-leader-skin')}</span>
+        <span class="home-leader-info"><strong>${escapeHTML(player.name)}</strong><span class="home-region-tag">${escapeHTML(player.region || '?')}</span></span>
+        <span class="home-leader-tier">${tierHTML}</span>
+        <span class="home-leader-score"><strong>${value}</strong><span>${unit}</span></span>
+    </button>`;
 }
 
 // Тег ранга (тот же размер, что у тега региона); Retired - красная R
@@ -570,10 +588,30 @@ function calcAverageTierOver(player, kits) {
     return getTierByElo(Math.round(values.reduce((a, b) => a + b, 0) / values.length));
 }
 
-// Скин в общем топе: файл с прозрачными полями обрезается до самого скина,
-// чтобы он занимал всё отведённое место, а не маленький кусочек.
+// ==========================================
+// СКИНЫ ИГРОКОВ
+// Файл assets/skins/default_bust.png обрезается до самого скина (без прозрачных
+// полей), чтобы он занимал всё место, и подставляется во ВСЕ экраны сразу после
+// готовности. Личные скины игроков (когда появятся): player.skin = "путь или ссылка".
+// ==========================================
 const DEFAULT_SKIN_SRC = 'assets/skins/default_bust.png';
 window.overallSkinSrc = DEFAULT_SKIN_SRC;
+
+function skinSrcFor(player) {
+    return (player && player.skin) ? player.skin : window.overallSkinSrc;
+}
+
+function skinImgHTML(player, cls) {
+    const custom = !!(player && player.skin);
+    return `<img class="skin-img ${cls || ''}" data-skin="${custom ? 'custom' : 'default'}" src="${escapeHTML(skinSrcFor(player))}" alt="" decoding="async" onerror="this.style.visibility='hidden';">`;
+}
+
+// Подменяет скин по умолчанию во всех уже нарисованных карточках
+function refreshDefaultSkins() {
+    document.querySelectorAll('img.skin-img[data-skin="default"]').forEach(img => {
+        if (img.getAttribute('src') !== window.overallSkinSrc) img.src = window.overallSkinSrc;
+    });
+}
 
 function trimTransparentImage(src) {
     return new Promise(resolve => {
@@ -602,15 +640,22 @@ function trimTransparentImage(src) {
                 const out = document.createElement('canvas');
                 out.width = cw; out.height = ch;
                 out.getContext('2d').drawImage(img, minX, minY, cw, ch, 0, 0, cw, ch);
-                resolve(out.toDataURL('image/png'));
+                // Короткая blob-ссылка вместо огромной data:-строки в каждой карточке
+                if (out.toBlob && window.URL && URL.createObjectURL) {
+                    out.toBlob(blob => resolve(blob ? URL.createObjectURL(blob) : out.toDataURL('image/png')), 'image/png');
+                } else {
+                    resolve(out.toDataURL('image/png'));
+                }
             } catch (e) {
-                resolve(src);   // например, файл недоступен для чтения - берём как есть
+                resolve(src);   // файл нельзя прочитать - берём как есть
             }
         };
         img.onerror = () => resolve(src);
         img.src = src;
     });
 }
+
+
 
 function gameProfileOnClick(name) {
     const encoded = encodeURIComponent(String(name)).replace(/'/g, '%27');
@@ -680,13 +725,14 @@ function renderPlayers() {
         if (!isOverall) {
             const rating = getKitRating(player, targetGame);
             htmlFragment += `
-                <div class="player-container ov-card premium-game-card ${topClass}" ${gameProfileOnClick(player.name)}>
-                    <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
+                <div class="player-container ov-card ov-card-single premium-game-card ${topClass}" ${gameProfileOnClick(player.name)}>
+                    <div class="ov-skin-wrap">${skinImgHTML(player, 'ov-skin')}</div>
                     <div class="ov-body">
                         <div class="ov-title">${rankHTML(position)}<span class="player-name">${nameHTML}</span></div>
                         <div class="ov-elo"><strong>${formatElo(rating)} Elo</strong></div>
-                        <div class="ov-tags">${ovTierTagHTML(rating.tier, rating.retired)}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
+                        <div class="ov-tags"><span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
                     </div>
+                    ${ovSingleTileHTML(images[targetGame], rating.tier, rating.retired, targetGame)}
                 </div>`;
             return;
         }
@@ -703,7 +749,7 @@ function renderPlayers() {
                 : ovTileHTML(x.kit, x.rating, images)).join('');
         htmlFragment += `
         <div class="player-container ov-card ${topClass}" ${gameProfileOnClick(player.name)}>
-            <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
+            <div class="ov-skin-wrap">${skinImgHTML(player, 'ov-skin')}</div>
             <div class="ov-body">
                 <div class="ov-title">${rankHTML(position)}<span class="player-name">${nameHTML}</span></div>
                 <div class="ov-elo">${totalElo} Elo</div>
@@ -1350,16 +1396,73 @@ function scrollToLeaderboard() {
     navigate('rating');
 }
 
+// Поиск на главной: список подсказок под полем; нажатие открывает профиль игрока.
+// Ищем и среди игроков PTS (киты), и среди игроков Elo (мини-игры).
+function findHomePlayers(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const found = new Map();
+    const add = (player, source) => {
+        const key = String(player.name).toLowerCase();
+        if (!key.includes(q)) return;
+        const entry = found.get(key) || { name: player.name, region: player.region, sources: [] };
+        if (!entry.sources.includes(source)) entry.sources.push(source);
+        if (source === 'kits') entry.region = player.region || entry.region;
+        found.set(key, entry);
+    };
+    (window.PTS ? window.PTS.getPlayers() : []).forEach(p => add(p, 'kits'));
+    (Array.isArray(eloPlayers) ? eloPlayers : []).forEach(p => { if (p.games && Object.keys(p.games).length) add(p, 'games'); });
+    return [...found.values()]
+        .sort((a, b) => (String(b.name).toLowerCase().startsWith(q) - String(a.name).toLowerCase().startsWith(q)) || a.name.localeCompare(b.name))
+        .slice(0, 6);
+}
+
+function openFoundPlayer(name, source) {
+    const results = document.getElementById('homeSearchResults');
+    if (results) results.hidden = true;
+    if (source === 'games' && !(window.PTS && window.PTS.getPlayers().some(p => p.name === name))) openGameProfileByName(name);
+    else if (window.PTS) window.PTS.openProfileByName(name);
+}
+
+function renderHomeSearchResults(query) {
+    const box = document.getElementById('homeSearchResults');
+    if (!box) return;
+    const q = query.trim();
+    if (!q) { box.hidden = true; box.innerHTML = ''; return; }
+    const hits = findHomePlayers(q);
+    box.innerHTML = hits.length ? hits.map(hit => {
+        const encoded = encodeURIComponent(hit.name).replace(/'/g, '%27');
+        const source = hit.sources.includes('kits') ? 'kits' : 'games';
+        const badges = hit.sources.map(s => `<span class="home-search-badge">${s === 'kits' ? 'PTS' : 'Elo'}</span>`).join('');
+        return `<button type="button" class="home-search-hit" onclick="openFoundPlayer(decodeURIComponent('${encoded}'), '${source}')">
+            <span class="home-search-hit-name">${escapeHTML(hit.name)}</span>
+            <span class="home-search-hit-meta">${badges}<span class="home-region-tag">${escapeHTML(hit.region || '?')}</span></span>
+        </button>`;
+    }).join('') : '<div class="home-search-empty">Игрок не найден</div>';
+    box.hidden = false;
+}
+
+function homeSearchTyping(value) {
+    const clear = document.getElementById('homeSearchClear');
+    if (clear) clear.hidden = !value;
+    renderHomeSearchResults(value);
+}
+
+function clearHomeSearch() {
+    const input = document.getElementById('homeSearchInput');
+    if (input) { input.value = ''; input.focus(); }
+    homeSearchTyping('');
+}
+
 function submitHomeSearch(event) {
     if (event) event.preventDefault();
-    const homeInput = document.getElementById('homeSearchInput');
-    const searchRow = document.getElementById('searchRow');
-    const searchToggle = document.getElementById('searchToggle');
-    const query = homeInput ? homeInput.value.trim() : '';
-    if (window.PTS) window.PTS.setSearch(query);
-    if (searchRow) searchRow.removeAttribute('hidden');
-    if (searchToggle) searchToggle.classList.add('active');
-    openRating('kits', 'all');
+    const input = document.getElementById('homeSearchInput');
+    const query = input ? input.value.trim() : '';
+    const hits = findHomePlayers(query);
+    if (!query) return;
+    const exact = hits.find(h => String(h.name).toLowerCase() === query.toLowerCase()) || hits[0];
+    if (exact) openFoundPlayer(exact.name, exact.sources.includes('kits') ? 'kits' : 'games');
+    else renderHomeSearchResults(query);
 }
 
 function openHomeMode(mode, value) {
@@ -1422,16 +1525,25 @@ function renderHome() {
         .slice(0, 5);
     if (leadersContainer) {
         leadersContainer.innerHTML = leaders.length ? leaders.map((player, index) => {
-            const averageTier = PTS.calcAverageTier(player);
-            const retired = PTS.hasAnyRetiredKit(player);
             const encoded = encodeURIComponent(player.name).replace(/'/g, '%27');
-            return `<button type="button" class="home-leader-row" onclick="PTS.openProfileByName(decodeURIComponent('${encoded}'))">
-                <span class="home-leader-position home-leader-position-${index + 1}">${index + 1}</span>
-                <img class="home-leader-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';">
-                <span class="home-leader-info"><strong>${escapeHTML(player.name)}</strong><span>${escapeHTML(player.region || '?')}</span></span>
-                <span class="home-leader-tier">${PTS.getTierBadge(averageTier, retired)}</span>
-                <span class="home-leader-elo">${PTS.calcPoints(player, maintiers)}</span>
-            </button>`;
+            return homeLeaderRowHTML(player, index, PTS.getTierBadge(PTS.calcAverageTier(player), PTS.hasAnyRetiredKit(player)),
+                PTS.calcPoints(player, maintiers), 'PTS', `PTS.openProfileByName(decodeURIComponent('${encoded}'))`);
+        }).join('') : '<div class="home-empty">Пока нет игроков</div>';
+    }
+
+    // Топ мини-игр (Elo)
+    const gamesContainer = document.getElementById('homeTopGames');
+    if (gamesContainer) {
+        const gameList = (typeof miniGames !== 'undefined') ? miniGames : [];
+        const gameLeaders = Array.isArray(eloPlayers) ? eloPlayers
+            .map(toGameView)
+            .filter(player => gameList.some(game => getCleanTier(player, game) !== 'Unranked'))
+            .sort((a, b) => (calcOverallElo(b, gameList) - calcOverallElo(a, gameList)) || a.name.localeCompare(b.name))
+            .slice(0, 5) : [];
+        gamesContainer.innerHTML = gameLeaders.length ? gameLeaders.map((player, index) => {
+            const encoded = encodeURIComponent(player.name).replace(/'/g, '%27');
+            return homeLeaderRowHTML(player, index, getTierBadge(calcAverageTierOver(player, gameList), hasAnyRetiredKit(player, gameList)),
+                calcOverallElo(player, gameList), 'Elo', `openGameProfileByName(decodeURIComponent('${encoded}'))`);
         }).join('') : '<div class="home-empty">Пока нет игроков</div>';
     }
 }
@@ -1533,9 +1645,13 @@ function startPlayersAutoRefresh() {
 // если DOM уже готов; загрузка стартует один раз)
 function initSite() {
     // Обрезаем прозрачные поля у скина и перерисовываем список
+    // Пока скин обрезается, изображения скрыты (иначе мелькает маленький необрезанный)
     trimTransparentImage(DEFAULT_SKIN_SRC).then(src => {
-        if (src !== window.overallSkinSrc) { window.overallSkinSrc = src; renderPlayers(); }
+        window.overallSkinSrc = src;
+        refreshDefaultSkins();
+        document.body.classList.add('skin-ready');
     });
+    setTimeout(() => document.body.classList.add('skin-ready'), 2500);
     renderHomeModeCards();
     applyRoute();          // экран по адресу (#rating и т.д.)
     renderHome();
