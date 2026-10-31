@@ -508,28 +508,30 @@ function renderPlayers() {
         const penalty = !isOverall ? getEffectivePenalty(player, targetKit) : 0;
         const penaltyHTML = penalty > 0 ? `<span class="bust-penalty-badge" title="Штрафные очки по этому киту">⚠ ${penalty}</span>` : '';
 
-        // Общий топ: первые пять - большие карточки. Топ отдельного кита: большие карточки
-        // для всех мест (с 6-го фон нейтральный, без цветной заливки).
-        if (index < 5 || !isOverall) {
-            const tiles = isOverall ? `<div class="ov-scroll" aria-label="Ранги по китам">${quickTiersFor(player, targetKit, showRetiredInPlace)}</div>` : '';
-            const ratingLine = isOverall
-                ? `<div class="ov-elo"><strong>${pts} PTS</strong></div><div class="ov-tags">${avgTagOv}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>`
-                : `<div class="ov-tags">${ovTierTagHTML(getCleanTier(player, targetKit), isRet)}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>${penaltyHTML ? `<div class="ov-elo premium-rating-line">${penaltyHTML}</div>` : ''}`;
+        // Все места - карточки с аватаром (с 6-го фон нейтральный, без цветной заливки).
+        // Общий топ: ранги по китам лентой. Топ кита: плитка кита справа.
+        if (isOverall) {
+            const tiles = `<div class="ov-scroll" aria-label="Ранги по китам">${quickTiersFor(player, targetKit, showRetiredInPlace)}</div>`;
             return `<div class="player-container ov-card premium-kit-card ${topClass}" ${onClick}>
-                <div class="ov-skin-wrap"><img class="ov-skin" src="${window.overallSkinSrc}" alt="" onerror="this.style.display='none';"></div>
+                <div class="ov-skin-wrap">${skinImgHTML(player, 'ov-skin')}</div>
                 <div class="ov-body">
                     <div class="ov-title">${rankHTML(position)}<span class="player-name">${escapeHTML(player.name)}</span></div>
-                    ${ratingLine}${tiles}
+                    <div class="ov-elo"><strong>${pts} PTS</strong></div>
+                    <div class="ov-tags">${avgTagOv}<span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
+                    ${tiles}
                 </div>
             </div>`;
         }
-
-        return `<div class="player-container ${topClass}">
-            <div class="player-card-row" ${onClick}>
-                <div class="player-name-block">${rankHTML(position)}<span class="player-name">${escapeHTML(player.name)}</span></div>
-                <div class="player-center-block"><div class="player-meta-box">${regionHTML}${avgTag}</div><div class="ov-scroll compact-overall-tiles">${quickTiersFor(player, targetKit, showRetiredInPlace)}</div></div>
-                <div class="player-right"><span class="pts-total">${pts} PTS</span></div>
+        const kitTier = getCleanTier(player, targetKit);
+        const kitPts = (typeof tierPoints !== 'undefined' && tierPoints[kitTier]) || 0;
+        return `<div class="player-container ov-card ov-card-single premium-kit-card ${topClass}" ${onClick}>
+            <div class="ov-skin-wrap">${skinImgHTML(player, 'ov-skin')}</div>
+            <div class="ov-body">
+                <div class="ov-title">${rankHTML(position)}<span class="player-name">${escapeHTML(player.name)}</span></div>
+                <div class="ov-elo"><strong>${kitPts} PTS</strong>${penaltyHTML ? ` ${penaltyHTML}` : ''}</div>
+                <div class="ov-tags"><span class="ov-tag">${escapeHTML(player.region || '?')}</span></div>
             </div>
+            ${ovSingleTileHTML((typeof kitImages !== 'undefined' && kitImages[targetKit]) || '', kitTier, isRet, targetKit)}
         </div>`;
     }).join('');
 }
