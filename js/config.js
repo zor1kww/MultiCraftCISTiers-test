@@ -111,8 +111,8 @@ const gameImages = {
 };
 
 const GAME_REGION_CODES = ["NA", "EU", "AS", "OC", "SA", "ME", "AF", "CA"];
-const KIT_REGION_CODES = ["RU", "UA", "BY", "KZ", "UZ", "KG", "AM", "AZ", "MD", "TJ"];
+const KIT_REGION_CODES = ["NA", "EU", "AS", "OC", "SA", "ME", "AF", "CA"];  // части света, как в bot/regions.py
 
 // ДЕМО-РЕЖИМ (только для тестового репозитория): рейтинг Games берётся из
 // js/demo-data.js, а не с API. В боевой версии поставьте false или удалите.
-const DEMO_MODE = true;
+const DEMO_MODE = false;
